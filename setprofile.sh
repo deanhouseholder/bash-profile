@@ -10,6 +10,8 @@ key_file=$ssh_dir/.pkey
 git_prompt_download="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh"
 git_profile_download="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 
+echo -e "\nStarting configuration of bash profile\n"
+
 mkdir -p $bin_dir
 curl "$git_prompt_download" -o $git_prompt 2>/dev/null
 curl "$git_profile_download" -o $profile 2>/dev/null
@@ -51,11 +53,14 @@ if [[ ! -f $key_file ]]; then
       PASS+="$char"
     fi
   done
+  echo -e "\n\n"
 
   # Add password to key_file
-  echo "$PASS" > $key_file
+  echo "echo \"$PASS\"" > $key_file
   unset PASS
   chmod 700 $key_file
 fi
 
 source $profile
+
+echo -e "Done\n"
