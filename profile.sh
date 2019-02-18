@@ -44,6 +44,7 @@ alias p="$EDITOR ~/.bash_profile"
 alias s='sudo su -'
 alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7, \$6, \$5}" | sort); echo -e "Location Used Free\n$OUT" | column -t'
 alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); echo -e "Location Used Free Format \n$OUT" | column -t'
+alias reboot?='[[ -f /var/run/reboot-required ]] && cat /var/run/reboot-required || echo "No need to reboot."'
 
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls -lh'
@@ -73,8 +74,6 @@ if [[ $bash_env != "vagrant" ]]; then
   alias vu='vagrant up'
   alias vh='vagrant halt'
   alias vs="vagrant ssh"
-  alias start="cd ${dir_prefix}Code/dnews-development/ && vagrant up && cd sites/"
-  alias stop="cd ${dir_prefix}Code/dnews-development/ && vagrant halt && exit"
 else
   alias va='echo You are in a Vagrant VM.'
   alias vu='echo You are in a Vagrant VM.'
