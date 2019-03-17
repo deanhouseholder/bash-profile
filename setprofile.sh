@@ -63,4 +63,4 @@ fi
 
 source $profile
 
-echo -e "Done\n"
+echo -e "Done\nYou can savely remove setprofile.sh if you want or use it to pull updates.\n"

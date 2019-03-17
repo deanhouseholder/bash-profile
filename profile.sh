@@ -17,6 +17,10 @@ elif [[ -d '/c' ]]; then
   # Git Bash
   export bash_env='git'
   export dir_prefix='/c/'
+elif [[ $(uname) == "Darwin" ]]; then
+  # Mac OSX
+  export bash_env='mac'
+  export dir_prefix='/'
 elif [[ -d '/vagrant' ]]; then
   # Vagrant
   export bash_env='vagrant'
