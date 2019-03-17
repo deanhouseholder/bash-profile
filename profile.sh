@@ -5,54 +5,61 @@ export LS_OPTIONS='--color=auto -F'
 source ~/bin/git-prompt.sh
 
 ## Detect Environment and set vars
-if [[ -d '/cygdrive' ]]; then
-  # Cygwin
+OSVER="$(cat /proc/version)"
+
+# Cygwin
+if [[ "$OSVER" =~ CYGWIN ]]; then
   export bash_env='cygwin'
   export dir_prefix='/cygdrive/c/'
-elif [[ -d '/mnt/c' ]]; then
-  # Git for Windows
+# Git for Windows
+elif [[ "$OSVER" =~ MINGW ]]; then
   export bash_env='gitforwin'
   export dir_prefix='/mnt/c/'
-elif [[ -d '/c' ]]; then
-  # Git Bash
+# Git Bash
+elif [[ "$OSVER" =~ Microsoft ]]; then
   export bash_env='git'
   export dir_prefix='/c/'
+# Mac OSX
 elif [[ $(uname) == "Darwin" ]]; then
-  # Mac OSX
   export bash_env='mac'
   export dir_prefix='/'
+# Vagrant
 elif [[ -d '/vagrant' ]]; then
-  # Vagrant
   export bash_env='vagrant'
   export dir_prefix='/'
+# Linux
 else
-  # Linux
   export bash_env='linux'
-  export dir_prefix="/"
+  export dir_prefix='/'
 fi
+
 
 ## Turn off CTRLS mode
 stty -ixon
 
 ## Aliases
 alias vi='vim "+syntax on"'
-alias v='ls -l $LS_OPTIONS'
-alias d='ls $LS_OPTIONS'
-alias ll='ls -lh $LS_OPTIONS'
-alias la='ls -lah $LS_OPTIONS'
-alias vless='`find /usr/share/vim/ -name less.sh 2>/dev/null`'
+alias ls='\ls $LS_OPTIONS'
+alias d='ls'
+alias da='ls -a'
+alias la='ls -lah'
+alias ll='ls -lh'
+alias v='ls -l'
+alias vless='$(find /usr/share/vim/ -name less.sh 2>/dev/null)'
 alias clear='printf "\033c"'
 alias cls='printf "\033c"'
-alias reload='. ~/.bash_profile'
-alias p="$EDITOR ~/.bash_profile"
+alias reload='. ~/bin/profile.sh'
+alias p='$EDITOR ~/bin/profile.sh'
 alias s='sudo su -'
 alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7, \$6, \$5}" | sort); echo -e "Location Used Free\n$OUT" | column -t'
 alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); echo -e "Location Used Free Format \n$OUT" | column -t'
 alias reboot?='[[ -f /var/run/reboot-required ]] && cat /var/run/reboot-required || echo "No need to reboot."'
+alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"''
+
 
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls -lh'
-alias logs='cd /var/log/apache2/ && ls -lh dean*'
+alias logs='cd /var/log/apache2/ && ls'
 alias rp='chown -R www-data:www-data .'
 
 ## Laravel
@@ -66,7 +73,7 @@ alias routes='php artisan route:list'
 alias bc='bin/console --ansi'
 alias rt='bin/console --ansi debug:router'
 alias aw='bin/console --ansi debug:autowiring'
-alias dc='bin/console --ansi debug:container'
+alias cdc='bin/console --ansi debug:container'
 alias dcfg='bin/console --ansi debug:config'
 alias dcfgf='bin/console --ansi debug:config framework'
 alias cdump='bin/console --ansi config:dump'
@@ -77,7 +84,9 @@ if [[ $bash_env != "vagrant" ]]; then
   alias va='vagrant'
   alias vu='vagrant up'
   alias vh='vagrant halt'
-  alias vs="vagrant ssh"
+  alias vs='vagrant ssh'
+  alias start='vagrant up'
+  alias stop='vagrant down'
 else
   alias va='echo You are in a Vagrant VM.'
   alias vu='echo You are in a Vagrant VM.'
@@ -87,31 +96,55 @@ else
   alias stop='echo You are in a Vagrant VM.'
 fi
 
+## Docker
+alias dc='docker-compose'
+alias dps='docker ps'
+alias don='docker-compose up --build -d'
+alias doff='docker-compose stop 2>/dev/null; docker-compose rm -f 2>/dev/null; docker rmi localdev-image -f 2>/dev/null'
+alias dssh='winpty docker run -it app1 /bin/bash'
+
 ## Git
 alias g='git'
-alias gh='git help'
-alias gs='clear && git status'
+alias gg='alias | grep [g]it'
+alias g.='git add . && gs'
 alias ga='git add'
 alias gac='git add . && git commit && git push'
-alias g.='git add . && gs'
+alias gad='git status -s | awk '"'"'{print $2}'"'"''
+alias gb='git branch -a'
 alias gc='git commit'
 alias gca='git commit -a --amend -C HEAD'
-alias gd='git diff *'
+alias gcm='git checkout master'
+alias gcd='git checkout develop'
+alias gd='git diff'
 alias gf='git fetch'
+alias gh='git help'
+alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
+alias gl='git log --graph --decorate'
+alias gl1='git log --oneline --graph --decorate'
+alias gla='git log --oneline --all --source --decorate=short'
+alias glf='git log --name-only'
 alias gp='git pull'
 alias gps='git push'
-alias gl='git log'
-alias gl1='git log --oneline'
-alias gg='alias | grep [g]it'
-alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
+alias greset='git checkout -- . && gad | xargs rm -r'
 alias grh='git reset HEAD --hard'
+alias gs='clear && git status --ignore-submodules'
+alias gsa='clear && git status'
+alias gss='git submodule status'
+alias gsu='git submodule update'
+alias gu='git update-git-for-windows'
+alias wip='git commit -am "WIP"'
 
 ## Useful Functions
-alias cc='f(){ composer clearcache; if [[ -f bin/console ]]; then php bin/console --ansi cache:clear; php bin/console --ansi cache:warmup; elif [[ -f artisan ]]; then php artisan view:clear; php artisan clear-compiled; fi }; f'
+alias cc='f(){ php ~/bin/composer clearcache; if [[ -f bin/console ]]; then php bin/console --ansi cache:clear; php bin/console --ansi cache:warmup; elif [[ -f artisan ]]; then php artisan view:clear; php artisan clear-compiled; fi }; f'
 alias fgrep='f(){ find -type f -name "$1" -exec grep -inHo "$2" \{\} \; }; f'
 alias gphp='f(){ find -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gcss='f(){ find -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gjs='f(){ find -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
+alias gch='f(){ git checkout -b $1 origin/$1; }; f'
+change_title(){ echo -e '\033]2;'$1'\007'; }
+find_up() { p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
+is_binary() { grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
+
 
 ## Extract function with progress bars where possible
 e () {
@@ -176,6 +209,7 @@ big () {
   du -sk * 2>/dev/null | sort -n | awk 'BEGIN{ pref[1]="K"; pref[2]="M"; pref[3]="G";} { total = total + $1; x = $1; y = 1; while( x > 1024 ) { x = (x + 1023)/1024; y++; } printf("%g%s\t%s\n",int(x*10)/10,pref[y],$2); } END { y = 1; while( total > 1024 ) { total = (total + 1023)/1024; y++; } printf("Total: %g%s\n",int(total*10)/10,pref[y]); }'
   cd - >/dev/null
 }
+
 
 ## Load SSH Agent/Install SSH Key
 if [[ -f ~/.ssh/id_rsa ]] && [[ -f ~/.ssh/.pkey ]]; then
