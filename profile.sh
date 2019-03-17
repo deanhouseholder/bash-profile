@@ -5,7 +5,7 @@ export LS_OPTIONS='--color=auto -F'
 source ~/bin/git-prompt.sh
 
 ## Detect Environment and set vars
-OSVER="$(cat /proc/version)"
+OSVER="$(cat /proc/version 2>/dev/null)"
 
 # Cygwin
 if [[ "$OSVER" =~ CYGWIN ]]; then
