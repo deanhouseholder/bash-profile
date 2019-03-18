@@ -34,7 +34,7 @@ else
 fi
 
 
-## Turn off CTRLS mode
+## Turn off CTRL+S mode
 stty -ixon
 
 ## Aliases
