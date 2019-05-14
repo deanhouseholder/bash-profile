@@ -141,6 +141,8 @@ alias gphp='f(){ find -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | sed 
 alias gcss='f(){ find -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gjs='f(){ find -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gch='f(){ git checkout -b $1 origin/$1; }; f'
+search(){ \grep -RHn "$1" | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
+searchi(){ \grep -RHin "$1" | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 change_title(){ echo -e '\033]2;'$1'\007'; }
 find_up() { p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary() { grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
