@@ -125,7 +125,7 @@ alias gla='git log --oneline --all --source --decorate=short'
 alias glf='git log --name-only'
 alias gp='git pull'
 alias gps='git push'
-alias greset='git checkout -- . && gad | xargs rm -r'
+alias greset='git checkout -- . && gad | xargs rm -r 2>/dev/null'
 alias grh='git reset HEAD --hard'
 alias gs='clear && git status --ignore-submodules'
 alias gsa='clear && git status'
@@ -136,13 +136,14 @@ alias wip='git commit -am "WIP"'
 
 ## Useful Functions
 alias cc='f(){ php ~/bin/composer clearcache; if [[ -f bin/console ]]; then php bin/console --ansi cache:clear; php bin/console --ansi cache:warmup; elif [[ -f artisan ]]; then php artisan view:clear; php artisan clear-compiled; fi }; f'
-alias fgrep='f(){ find -type f -name "$1" -exec grep -inHo "$2" \{\} \; }; f'
-alias gphp='f(){ find -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
-alias gcss='f(){ find -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
-alias gjs='f(){ find -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
+alias gphp='f(){ find . -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
+alias gcss='f(){ find . -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
+alias gjs='f(){ find . -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gch='f(){ git checkout -b $1 origin/$1; }; f'
-search(){ \grep -RHn "$1" | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
-searchi(){ \grep -RHin "$1" | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
+alias searchfiles='f(){ find . -type f -name "$1" -exec grep -nHo "$2" \{\} \;; }; f'
+alias searchfilesi='f(){ find . -type f -name "$1" -exec grep -inHo "$2" \{\} \;; }; f'
+search(){ \grep -RHn "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
+searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 change_title(){ echo -e '\033]2;'$1'\007'; }
 find_up() { p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary() { grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
