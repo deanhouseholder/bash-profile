@@ -12,4 +12,3 @@ To set up the bash environment, simply download the setprofile.sh script and run
 curl https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/setprofile.sh -o setprofile.sh
 source setprofile.sh
 ```
-

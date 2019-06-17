@@ -4,17 +4,20 @@ bin_dir=~/bin
 ssh_dir=~/.ssh
 startup_file=~/.bashrc
 profile=$bin_dir/profile.sh
+git_menu=$bin_dir/git-menu.md
 local_env=$bin_dir/local_env.sh
 git_prompt=$bin_dir/git-prompt.sh
 key_file=$ssh_dir/.pkey
 git_prompt_download="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh"
 git_profile_download="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
+git_menu_download="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
 
 echo -e "\nStarting configuration of bash profile\n"
 
 mkdir -p $bin_dir
 curl "$git_prompt_download" -o $git_prompt 2>/dev/null
 curl "$git_profile_download" -o $profile 2>/dev/null
+curl "$git_menu_download" -o $git_menu 2>/dev/null
 
 # If the local_env.sh doesn't exist or is 0 bytes
 if [[ ! -s $local_env ]]; then

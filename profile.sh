@@ -2,6 +2,8 @@
 export PATH=$PATH:~/bin
 export TERM='xterm-256color'
 export LS_OPTIONS='--color=auto -F'
+export PROFILE_SH_PATH="$BASH_SOURCE"
+export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
 source ~/bin/git-prompt.sh
 
 ## Detect Environment and set vars
@@ -105,7 +107,7 @@ alias dssh='winpty docker run -it app1 /bin/bash'
 
 ## Git
 alias g='git'
-alias gg='alias | grep [g]it'
+alias gh='display_alias_menu "git-menu.md" "Git Shortcuts Menu"'
 alias g.='git add . && gs'
 alias ga='git add'
 alias gac='git add . && git commit && git push'
@@ -115,18 +117,26 @@ alias gc='git commit'
 alias gca='git commit -a --amend -C HEAD'
 alias gcm='git checkout master'
 alias gcd='git checkout develop'
+alias gcb='f(){ git checkout bugfix/$1 2>/dev/null; git branch -u origin/bugfix/$1 bugfix/$1 >/dev/null; }; f'
+alias gcf='f(){ git checkout feature/$1 2>/dev/null; git branch -u origin/feature/$1 feature/$1 >/dev/null; }; f'
+alias gch='f(){ git checkout hotfix/$1 2>/dev/null; git branch -u origin/hotfix/$1 hotfix/$1 >/dev/null; }; f'
+alias gcr='f(){ git checkout release/$1 2>/dev/null; git branch -u origin/release/$1 release/$1 >/dev/null; }; f'
+alias gcs='f(){ git checkout support/$1 2>/dev/null; git branch -u origin/support/$1 support/$1 >/dev/null; }; f'
 alias gd='git diff'
 alias gf='git fetch'
-alias gh='git help'
 alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
 alias gl='git log --graph --decorate'
-alias gl1='git log --oneline --graph --decorate'
+alias glg='git log --oneline --graph --decorate'
 alias gla='git log --oneline --all --source --decorate=short'
+alias gld='git show'
 alias glf='git log --name-only'
+alias glast='git show --stat=$(tput cols) --compact-summary'
 alias gp='git pull'
 alias gps='git push'
-alias greset='git checkout -- . && gad | xargs rm -r 2>/dev/null'
-alias grh='git reset HEAD --hard'
+alias gr='git checkout -- .'
+alias grm='gad | xargs rm -r 2>/dev/null'
+alias greset='gr && grm'
+alias grh='git reset --hard'
 alias gs='clear && git status --ignore-submodules'
 alias gsa='clear && git status'
 alias gss='git submodule status'
@@ -145,8 +155,35 @@ alias searchfilesi='f(){ find . -type f -name "$1" -exec grep -inHo "$2" \{\} \;
 search(){ \grep -RHn "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 change_title(){ echo -e '\033]2;'$1'\007'; }
-find_up() { p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
-is_binary() { grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
+find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
+is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
+
+
+## Display Alias Menu
+display_alias_menu() {
+
+  repeat_string() {
+    printf "%0.s$1" $(seq 1 $2)
+  }
+
+  # Get Aliases from .md file passed in
+  OUT="$(cat $PROFILE_SH_DIR/$1 | grep -E '^\|')"
+  FIRST_LINE="$(echo "$OUT" | head -n1)"
+  LENGTH=$((${#FIRST_LINE}+2))
+  PADDING=$((($LENGTH / 2) - 10))
+  BAR="$(repeat_string '-' $LENGTH)"
+
+  HELP="$(echo "$OUT" | awk '{
+   gsub("^\\| ([a-z\\[\\]][^ ]*)", "| \033[36m"$2"\033[37m");
+   gsub("\\| Alias Name", "| \033[1;37mAlias Name\033[0;37m");
+   gsub("\\| Description", "| \033[1;37mDescription\033[0;37m");
+   gsub("\\|", " | ");
+   print $0
+  }')"
+
+  echo -e "\n$(repeat_string ' ' $PADDING)${HEADER}$2$N\n"
+  printf " +%s+\n%s\n +%s+\n\n" "$BAR" "$HELP" "$BAR"
+}
 
 
 ## Extract function with progress bars where possible
