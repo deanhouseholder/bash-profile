@@ -35,7 +35,6 @@ else
   export dir_prefix='/'
 fi
 
-
 ## Turn off CTRL+S mode
 stty -ixon
 
@@ -57,7 +56,18 @@ alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7,
 alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); echo -e "Location Used Free Format \n$OUT" | column -t'
 alias reboot?='[[ -f /var/run/reboot-required ]] && cat /var/run/reboot-required || echo "No need to reboot."'
 alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"''
+alias bin='cd ~/bin'
+alias ut='cd /'
+alias up='cd ..'
+alias up2='cd ../..'
+alias up3='cd ../../..'
+alias up4='cd ../../../..'
+alias up5='cd ../../../../..'
 
+## PHP
+alias c='composer'
+alias cl='c list'
+alias cr='c require'
 
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls -lh'
@@ -66,20 +76,18 @@ alias rp='chown -R www-data:www-data .'
 
 ## Laravel
 alias a='php artisan'
-alias c='composer'
-alias cr='composer require'
-alias r='php artisan route:list'
-alias routes='php artisan route:list'
+alias r='a route:list'
+alias routes='a route:list'
 
 ## Symfony
 alias bc='bin/console --ansi'
-alias rt='bin/console --ansi debug:router'
-alias aw='bin/console --ansi debug:autowiring'
-alias cdc='bin/console --ansi debug:container'
-alias dcfg='bin/console --ansi debug:config'
-alias dcfgf='bin/console --ansi debug:config framework'
-alias cdump='bin/console --ansi config:dump'
-alias cdumpf='bin/console --ansi config:dump framework'
+alias rt='bc debug:router'
+alias aw='bc debug:autowiring'
+alias cdc='bc debug:container'
+alias dcfg='bc debug:config'
+alias dcfgf='bc debug:config framework'
+alias cdump='bc config:dump'
+alias cdumpf='bc config:dump framework'
 
 ## Vagrant
 if [[ $bash_env != "vagrant" ]]; then
@@ -99,15 +107,20 @@ else
 fi
 
 ## Docker
+which winpty &>/dev/null
+[[ $? == 0 ]] && WINPTY='winpty ' || WINPTY=''
+alias doc="${WINPTY}docker"
 alias dc='docker-compose'
-alias dps='docker ps'
-alias don='docker-compose up --build -d'
-alias doff='docker-compose stop 2>/dev/null; docker-compose rm -f 2>/dev/null; docker rmi localdev-image -f 2>/dev/null'
-alias dssh='winpty docker run -it app1 /bin/bash'
+alias dps='doc ps'
+alias dup='dc up -d'
+alias ddown='dc stop'
+alias dssh='doc run -it app1 /bin/bash'
 
 ## Git
 alias g='git'
-alias gh='display_alias_menu "git-menu.md" "Git Shortcuts Menu"'
+alias gm='display_alias_menu "git-menu.md" "Git Shortcuts Menu"'
+alias gmenu='gm'
+alias gh='git help'
 alias g.='git add . && gs'
 alias ga='git add'
 alias gac='git add . && git commit && git push'
@@ -143,9 +156,12 @@ alias gss='git submodule status'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
 alias wip='git commit -am "WIP"'
+alias stash='git stash'
+alias restore='git stash pop'
 
 ## Useful Functions
-alias cc='f(){ php ~/bin/composer clearcache; if [[ -f bin/console ]]; then php bin/console --ansi cache:clear; php bin/console --ansi cache:warmup; elif [[ -f artisan ]]; then php artisan view:clear; php artisan clear-compiled; fi }; f'
+alias cc='f(){ php ~/bin/composer clearcache;if [[ -f artisan ]]; then a clear-compiled;a optimize;a cache:clear;a config:clear;a route:clear;a view:clear;c clearcache;c dumpautoload;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;c clearcache;c dumpautoload;fi }; f'
+
 alias gphp='f(){ find . -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gcss='f(){ find . -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
 alias gjs='f(){ find . -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
@@ -157,6 +173,27 @@ searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-
 change_title(){ echo -e '\033]2;'$1'\007'; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
+gitflow() {
+    GIT_FLOW_CONFIG="master\ndevelop\nfeature/\nbugfix/\nrelease/\nhotfix/\nsupport/\n\n\n"
+    # Check to see if git flow is initialized and is correctly configured
+    echo "Checking git flow config..."
+    GIT_FLOW_CHECK=$(git flow config 2>/dev/null)
+    if [[ $? -eq 1 ]]; then
+      # Check if Git Flow is installed
+      GIT_CHECK=$(git flow 2>&1 | grep 'not a git command' | wc -l)
+      if [[ $GIT_CHECK -eq 1 ]]; then
+        echo -e "\nError: Git Flow is not installed.\n\nPlease run: \"apt install git-flow\"\n"
+        return 1
+      fi
+      # Set Git Flow config
+      echo "Configuring git flow"
+      echo -e "$GIT_FLOW_CONFIG" | git flow init >/dev/null
+    elif [[ $(echo "$GIT_FLOW_CHECK" | grep "Feature branch prefix: feature/" | wc -l) -eq 0 ]]; then
+      # Force reset of Git Flow config
+      echo "Reconfiguring git flow"
+      echo -e "$GIT_FLOW_CONFIG" | git flow init -f >/dev/null
+    fi
+}
 
 
 ## Display Alias Menu

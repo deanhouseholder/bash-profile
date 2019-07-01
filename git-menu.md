@@ -3,7 +3,9 @@
 | Alias Name    | Description                                                   |
 | ------------- | ------------------------------------------------------------- |
 | g             | Quick shortcut to git command                                 |
-| gh            | Show this help menu                                           |
+| gm            | Show this help menu                                           |
+| gmenu         | Show this help menu                                           |
+| gh            | Shortcut for git help                                         |
 | g.            | Stage all changes and do a git status                         |
 | ga            | Shortcut for "git add"                                        |
 | gac           | Stage files, commit (prompt for message) and push             |
@@ -39,3 +41,6 @@
 | gsu           | Update all submodules                                         |
 | gu            | Look for git updates                                          |
 | wip           | Make a "Work in Progress" commit with a message of "WIP"      |
+| stash         | Stash current changes                                         |
+| restore       | Restore latest stashed changes                                |
+| gitflow       | Configure or fix Git Flow for the current project             |
