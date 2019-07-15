@@ -1,11 +1,3 @@
-## Exports
-export PATH=$PATH:~/bin
-export TERM='xterm-256color'
-export LS_OPTIONS='--color=auto -F'
-export PROFILE_SH_PATH="$BASH_SOURCE"
-export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
-source ~/bin/git-prompt.sh
-
 ## Detect Environment and set vars
 OSVER="$(cat /proc/version 2>/dev/null)"
 
@@ -35,6 +27,18 @@ else
   export dir_prefix='/'
 fi
 
+## Exports
+export PATH=$PATH:~/bin
+export TERM='xterm-256color'
+export PROFILE_SH_PATH="$BASH_SOURCE"
+export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
+if [[ $bash_env == 'mac' ]]; then
+  export LS_OPTIONS='-GF'
+else
+  export LS_OPTIONS='--color=auto -F'
+fi
+source ~/bin/git-prompt.sh
+
 ## Turn off CTRL+S mode
 stty -ixon
 
@@ -52,8 +56,8 @@ alias cls='printf "\033c"'
 alias reload='. ~/bin/profile.sh'
 alias p='$EDITOR ~/bin/profile.sh'
 alias s='sudo su -'
-alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7, \$6, \$5}" | sort); echo -e "Location Used Free\n$OUT" | column -t'
-alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); echo -e "Location Used Free Format \n$OUT" | column -t'
+alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n$OUT\n" | column -t'
+alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); printf "Location Used Free Format \n$OUT\n" | column -t'
 alias reboot?='[[ -f /var/run/reboot-required ]] && cat /var/run/reboot-required || echo "No need to reboot."'
 alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"''
 alias bin='cd ~/bin'
@@ -155,9 +159,10 @@ alias gsa='clear && git status'
 alias gss='git submodule status'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
-alias wip='git commit -am "WIP"'
+alias new='f(){ git checkout -b $1 2>/dev/null; git branch -u origin/$1 $1 >/dev/null; }; f'
 alias stash='git stash'
 alias restore='git stash pop'
+alias wip='git commit -am "WIP"'
 
 ## Useful Functions
 alias cc='f(){ php ~/bin/composer clearcache;if [[ -f artisan ]]; then a clear-compiled;a optimize;a cache:clear;a config:clear;a route:clear;a view:clear;c clearcache;c dumpautoload;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;c clearcache;c dumpautoload;fi }; f'
@@ -170,7 +175,7 @@ alias searchfiles='f(){ find . -type f -name "$1" -exec grep -nHo "$2" \{\} \;; 
 alias searchfilesi='f(){ find . -type f -name "$1" -exec grep -inHo "$2" \{\} \;; }; f'
 search(){ \grep -RHn "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
-change_title(){ echo -e '\033]2;'$1'\007'; }
+change_title(){ printf '\033]2;'$1'\007'; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
 gitflow() {
@@ -182,16 +187,16 @@ gitflow() {
       # Check if Git Flow is installed
       GIT_CHECK=$(git flow 2>&1 | grep 'not a git command' | wc -l)
       if [[ $GIT_CHECK -eq 1 ]]; then
-        echo -e "\nError: Git Flow is not installed.\n\nPlease run: \"apt install git-flow\"\n"
+        printf "\nError: Git Flow is not installed.\n\nPlease run: \"apt install git-flow\"\n\n"
         return 1
       fi
       # Set Git Flow config
       echo "Configuring git flow"
-      echo -e "$GIT_FLOW_CONFIG" | git flow init >/dev/null
+      printf "$GIT_FLOW_CONFIG" | git flow init >/dev/null
     elif [[ $(echo "$GIT_FLOW_CHECK" | grep "Feature branch prefix: feature/" | wc -l) -eq 0 ]]; then
       # Force reset of Git Flow config
       echo "Reconfiguring git flow"
-      echo -e "$GIT_FLOW_CONFIG" | git flow init -f >/dev/null
+      printf "$GIT_FLOW_CONFIG" | git flow init -f >/dev/null
     fi
 }
 
@@ -218,7 +223,7 @@ display_alias_menu() {
    print $0
   }')"
 
-  echo -e "\n$(repeat_string ' ' $PADDING)${HEADER}$2$N\n"
+  printf "\n$(repeat_string ' ' $PADDING)${HEADER}$2$N\n"
   printf " +%s+\n%s\n +%s+\n\n" "$BAR" "$HELP" "$BAR"
 }
 
@@ -227,29 +232,46 @@ display_alias_menu() {
 e () {
   # Exit the function if the file is not found
   if [[ ! -f "$1" ]]; then
-    echo -e "\e[31mError: Couldn't find file.\e[0m"
+    printf "\n\e[31mERROR: Couldn't find file to extract.\e[0m\n"
     kill -INT $$
+  fi
+  local filename=$(basename $1)
+  local dir=$(pwd)
+  
+  printf "Extract $filename into $dir\n\n"
+
+  local count=$(\ls | wc -l | awk '{print $1}')
+  if [[ $count -ne 0 ]]; then
+    printf "\e[33mWARNING: The current directory is not empty!\n\n"
+    printf "There are currently [$count] items in this directory.\e[0m\n\n"
+    printf "Would you like to proceed anyway? [y/N]\n"
+    read -sn 1 p
+    if [[ ! $p =~ [yY] ]]; then
+      printf "\nCancelled\n"
+      kill -INT $$
+    fi
+    echo
   fi
 
   case "$1" in
-    *.7z)       ext=".7z";       cmd="7z";          options="x";      usepv=0;;
-    *.tar.bz2)  ext=".tar.bz2";  cmd="tar";         options="jxvf";   usepv=0;;
-    *.tbz2)     ext=".tbz2";     cmd="tar";         options="jxvf";   usepv=0;;
-    *.tar.gz)   ext=".tar.gz";   cmd="tar";         options="zxvf";   usepv=0;;
-    *.tgz)      ext=".tgz";      cmd="tar";         options="zxvf";   usepv=0;;
-    *.tar)      ext=".tar";      cmd="tar";         options="xvf";    usepv=0;;
-    *.rar)      ext=".rar";      cmd="unrar";       options="x";      usepv=0;;
-    *.Z)        ext=".Z";        cmd="uncompress";  options="";       usepv=0;;
-    *.bz2)      ext=".bz2";      cmd="bunzip2";     options="";       usepv=1;;
-    *.gz)       ext=".gz";       cmd="gunzip";      options="";       usepv=1;;
-    *.zip)      ext=".zip";      cmd="unzip";       options="";       usepv=1;;
-    *)          echo -e "\e[31mError: Cannot determine how to extract '$1'\e[0m" && kill -INT $$;;
+    *.7z)       ext=".7z";       cmd="7z";          options="x";     usepv=0;;
+    *.tar.bz2)  ext=".tar.bz2";  cmd="tar";         options="jxvf";  usepv=0;;
+    *.tbz2)     ext=".tbz2";     cmd="tar";         options="jxvf";  usepv=0;;
+    *.tar.gz)   ext=".tar.gz";   cmd="tar";         options="zxvf";  usepv=0;;
+    *.tgz)      ext=".tgz";      cmd="tar";         options="zxvf";  usepv=0;;
+    *.tar)      ext=".tar";      cmd="tar";         options="xvf";   usepv=0;;
+    *.rar)      ext=".rar";      cmd="unrar";       options="x";     usepv=0;;
+    *.Z)        ext=".Z";        cmd="uncompress";  options="";      usepv=0;;
+    *.bz2)      ext=".bz2";      cmd="bunzip2";     options="";      usepv=1;;
+    *.gz)       ext=".gz";       cmd="gunzip";      options="";      usepv=1;;
+    *.zip)      ext=".zip";      cmd="unzip";       options="";      usepv=1;;
+    *)          printf "\e[31mError: Cannot determine how to extract '$1'\e[0m\n" && kill -INT $$;;
   esac
 
-  echo -e "\e[32mExtracting $1\e[0m"
+  printf "\e[32mExtracting $filename\e[0m\n"
 
   # Check if extraction command is installed/executable
-  [[ ! -x "$(which $cmd)" ]] && echo -e "\e[31mError: $cmd is not installed\e[0m" && kill -INT $$
+  [[ ! -x "$(which $cmd)" ]] && printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
 
   # Check if pv is enabled and installed
   if [[ $usepv -eq 1 && -x "$(which pv)" ]]; then
@@ -272,6 +294,7 @@ e () {
     # Run command
     $cmd $options "$1"
   fi
+  printf "\nDone\n\n"
 }
 
 ## ls with octal permission labels
@@ -332,9 +355,9 @@ git_fmt="$fg$git_fg$bg$git_bg$fmt_bold"
 function git_branch {
   if [[ -n $1 ]]; then
     if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
-      echo -e "\033[38;5;40m"
+      printf "\033[38;5;40m"
     else
-      echo -e "\033[38;5;196m"
+      printf "\033[38;5;196m"
     fi
   fi
 }

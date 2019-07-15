@@ -40,7 +40,8 @@
 | gss           | Get the status of all submodules                              |
 | gsu           | Update all submodules                                         |
 | gu            | Look for git updates                                          |
-| wip           | Make a "Work in Progress" commit with a message of "WIP"      |
+| gitflow       | Configure or fix Git Flow for the current project             |
+| new           | Create a new branch with upstream tracking                    |
 | stash         | Stash current changes                                         |
 | restore       | Restore latest stashed changes                                |
-| gitflow       | Configure or fix Git Flow for the current project             |
+| wip           | Make a "Work in Progress" commit with a message of "WIP"      |
