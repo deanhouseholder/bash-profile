@@ -159,7 +159,8 @@ alias gsa='clear && git status'
 alias gss='git submodule status'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
-alias new='f(){ git checkout -b $1 2>/dev/null; git branch -u origin/$1 $1 >/dev/null; }; f'
+alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
+alias new='f(){ git checkout -b $1 2>/dev/null; git branch -u origin/$1 $1 2>/dev/null; }; f'
 alias stash='git stash'
 alias restore='git stash pop'
 alias wip='git commit -am "WIP"'
@@ -175,6 +176,8 @@ alias searchfiles='f(){ find . -type f -name "$1" -exec grep -nHo "$2" \{\} \;; 
 alias searchfilesi='f(){ find . -type f -name "$1" -exec grep -inHo "$2" \{\} \;; }; f'
 search(){ \grep -RHn "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
 searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
+searchcount(){ \grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c; }
+searchcounti(){ \grep -RHin "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c; }
 change_title(){ printf '\033]2;'$1'\007'; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
