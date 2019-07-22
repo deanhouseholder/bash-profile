@@ -1,47 +1,98 @@
 #!/bin/bash
+# setprofile.sh
+# Description: This script will install Dean Householder's bash prompt
+# URL: https://github.com/deanhouseholder/bash-profile
 
-bin_dir=~/bin
-ssh_dir=~/.ssh
-startup_file=~/.bashrc
-profile=$bin_dir/profile.sh
-git_menu=$bin_dir/git-menu.md
-local_env=$bin_dir/local_env.sh
-git_prompt=$bin_dir/git-prompt.sh
-key_file=$ssh_dir/.pkey
-git_prompt_download="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh"
-git_profile_download="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
-git_menu_download="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
+# Define variables
+dir_bin=~/bin
+dir_ssh=~/.ssh
+file_startup=~/.bashrc
+file_profile=$dir_bin/profile.sh
+file_git_menu=$dir_bin/git-menu.md
+file_local_env=$dir_bin/local_env.sh
+file_git_completion=$dir_bin/git-completion.bash
+file_key=$dir_ssh/.pkey
+url_git_completion="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
+url_git_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
+url_git_menu="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
 
-echo -e "\nStarting configuration of bash profile\n"
+# Start install script
+printf "\nStarting configuration of bash profile\n\n"
 
-mkdir -p $bin_dir
-curl "$git_prompt_download" -o $git_prompt 2>/dev/null
-curl "$git_profile_download" -o $profile 2>/dev/null
-curl "$git_menu_download" -o $git_menu 2>/dev/null
+mkdir -p $dir_bin
 
 # If the local_env.sh doesn't exist or is 0 bytes
-if [[ ! -s $local_env ]]; then
-  echo "# Add any custom bash profile tweaks specific to this environment in this file" > $local_env
+if [[ ! -s $file_local_env ]]; then
+  echo "# Add any custom bash profile tweaks specific to this environment in this file" > $file_local_env
 fi
 
 # If there is no EDITOR defined prompt for one
-if [[ $(grep "EDITOR=" $local_env | wc -l) -eq 0 ]]; then
+if [[ $(grep "EDITOR=" $file_local_env | wc -l) -eq 0 ]]; then
   read -p "Which editor do you prefer? [vim], nano, emacs" editor
-  [[ -z $editor ]] && editor=vim
-  echo "export EDITOR=$editor" >> $local_env
+  test -z $editor && editor=vim
+  echo "export EDITOR=$editor" >> $file_local_env
   echo
 fi
 
+# Add a .vimrc file to always turn on syntax highlighting
+if [[ ! -s ~/.vimrc ]]; then
+  echo "synax on" > ~/.vimrc
+fi
+
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
-if [[ $(grep "source $profile" $startup_file | wc -l) -eq 0 ]]; then
-  echo -e "\nsource $profile\n" >> $startup_file
+if [[ $(grep "source $file_profile" $file_startup | wc -l) -eq 0 ]]; then
+  printf "\nsource $file_profile\n\n" >> $file_startup
+fi
+
+# Configure Git
+read -p "Do want to configure Git? [Y/n] " use_git
+if [[ ! "$use_git" =~ [nN][oO]? ]]; then
+    curl "$url_git_completion" -o $file_git_completion 2>/dev/null
+    curl "$url_git_menu" -o $file_git_menu 2>/dev/null
+    curl "$url_git_profile" -o $file_profile 2>/dev/null
+
+    # Configure git settings
+    if [[ -z "$(git config --global user.name)" ]]; then
+      read -p "What name would you like to use for git commits? (typically your full name) " user_name
+      git config --global user.name "$user_name"
+    fi
+    if [[ -z "$(git config --global user.email)" ]]; then
+      read -p "What email address would you like to use for git commits? " user_email
+      git config --global user.email "$user_email"
+    fi
+    read -p "Would you like to update your Git colors/options configuration? [Y/n] " update_git
+    if [[ ! "$update_git" =~ [nN][oO]? ]]; then
+        git config --global core.whitespace "fix,-indent-with-non-tab,trailing-space,cr-at-eol"
+        git config --global format.pretty "%C(178)%h%Creset %C(110)%cd%Creset %C(85)%d %C(15)%s"
+        git config --global color.branch "auto"
+        git config --global color.interactive "auto"
+        git config --global color.diff "auto"
+        git config --global color.status "auto"
+        git config --global color.ui "auto"
+        git config --global color.branch.current "reverse 40"
+        git config --global color.branch.local "40"
+        git config --global color.branch.remote "166"
+        git config --global color.diff.meta "116"
+        git config --global color.diff.frag "15"
+        git config --global color.diff.old "196"
+        git config --global color.diff.new "76"
+        git config --global color.status.added "40"
+        git config --global color.status.changed "166"
+        git config --global color.status.untracked "50"
+        git config --global color.decorate.branch "40"
+        git config --global color.decorate.remoteBranch "80"
+        git config --global color.decorate.tag "166"
+        git config --global color.decorate.stash "40"
+        git config --global color.decorate.HEAD "50"
+        git config --global push.default "simple"
+    fi
 fi
 
 # Set up ssh key passphrase
-mkdir -p $ssh_dir
-chmod 700 $ssh_dir
+mkdir -p $dir_ssh
+chmod 700 $dir_ssh
 
-if [[ ! -f $key_file ]]; then
+if [[ ! -f $file_key ]]; then
   # Read password
   prompt="Enter SSH Key Passphrase: "
   while IFS= read -p "$prompt" -r -s -n 1 char
@@ -50,20 +101,23 @@ if [[ ! -f $key_file ]]; then
         break
     elif [[ $char == $'\177' ]]; then
         prompt=$'\b \b'
-        PASS="${PASS%?}"
+        pass="${pass%?}"
     else
       prompt='*'
-      PASS+="$char"
+      pass+="$char"
     fi
   done
-  echo -e "\n\n"
+  printf "\n\n\n"
 
   # Add password to key_file
-  echo "echo \"$PASS\"" > $key_file
-  unset PASS
-  chmod 700 $key_file
+  echo "echo \"$pass\"" > $file_key
+  unset pass
+  chmod 700 $file_key
 fi
 
-source $profile
+unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_key url_git_completion url_git_profile url_git_menu editor use_git user_name user_email update_git prompt char pass
 
-echo -e "Done\nYou can safely remove setprofile.sh if you want or use it to pull updates.\n"
+source $file_profile
+unset file_profile
+
+printf "\nDone\n\nYou can safely remove setprofile.sh if you want or use it to pull updates.\n\n"

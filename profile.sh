@@ -37,13 +37,13 @@ if [[ $bash_env == 'mac' ]]; then
 else
   export LS_OPTIONS='--color=auto -F'
 fi
-source ~/bin/git-prompt.sh
+source ~/bin/git-completion.bash
 
 ## Turn off CTRL+S mode
 stty -ixon
 
 ## Aliases
-alias vi='vim "+syntax on"'
+alias vi='vim'
 alias ls='\ls $LS_OPTIONS'
 alias d='ls'
 alias da='ls -a'
@@ -160,7 +160,7 @@ alias gss='git submodule status'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
 alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
-alias new='f(){ git checkout -b $1 2>/dev/null; git branch -u origin/$1 $1 2>/dev/null; }; f'
+alias new='f(){ git checkout -b $1 2>/dev/null || git checkout $1; git branch -u origin/$1 $1 2>/dev/null; }; f'
 alias stash='git stash'
 alias restore='git stash pop'
 alias wip='git commit -am "WIP"'
@@ -240,7 +240,7 @@ e () {
   fi
   local filename=$(basename $1)
   local dir=$(pwd)
-  
+
   printf "Extract $filename into $dir\n\n"
 
   local count=$(\ls | wc -l | awk '{print $1}')
@@ -328,52 +328,64 @@ if [[ -f ~/.ssh/id_rsa ]] && [[ -f ~/.ssh/.pkey ]]; then
 fi
 
 
-## Colors
-root_bg="8;5;130m"
-root_fg="7m"
-user_bg="8;5;39m"
-user_fg="7m"
-dir_bg="8;5;236m"
-dir_fg="7m"
-git_fg="7m"
-git_bg="8;5;55m"
+## Bash Prompt Start
 
-## Helper Vars
-fmt_bold="\e[1m"
-default="9m"
-bg="\e[4"
-fg="\e[3"
-end="\e[0m"
-
-## Formattings
-if [ $UID -eq 0 ]; then
-  user_fmt="$fg$root_fg$bg$root_bg$fmt_bold"
-else
-  user_fmt="$fg$user_fg$bg$user_bg$fmt_bold"
-fi
-dir_fmt="$fg$dir_fg$bg$dir_bg"
-git_fmt="$fg$git_fg$bg$git_bg$fmt_bold"
-
-## Function to get the current git branch
-function git_branch {
-  if [[ -n $1 ]]; then
-    if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
-      printf "\033[38;5;40m"
-    else
-      printf "\033[38;5;196m"
-    fi
-  fi
+# Function to shorten the directory
+function shorten_pwd {
+  test ${#PWD} -gt 40 && echo "$PWD" | awk -F/ '{print "/"$2"/["(NF-4)"]/"$(NF-1)"/"$NF}' || pwd
 }
 
-## Prompts
-export PS1="\[$user_fmt\] \u \[$end\]\
-\[$dir_fmt\] \w \[$end\]\
-\[$git_fmt\] [\[\$(git_branch \$(__git_ps1))\]\$(__git_ps1 '%s')\[$end$git_fmt\]]> \[$end\]"
-export PS2="\[$dir_term_fmt\]#> \[$end\]"
-export PS3="\[$dir_term_fmt\]#> \[$end\]"
-export PS4="\[$dir_fmt\]+\[$dir_term_fmt\] \[$end\]"
+function show_prompt {
+    ## Prompt Colors
+    local fgr="\e[0;37m"                        # Foreground White Regular
+    local fgb="\e[1;37m"                        # Foreground White Bold
+    local root_bg="\e[48;5;130m"                # Orange
+    local user_bg="\e[48;5;39m"                 # Blue
+    local dir_bg="\e[48;5;236m"                 # Dark Gray
+    local N="\e[0m"                             # Reset styles
+    export git_style="\e[01;38;05;15;48;05;55m" # Foreground White Bold, Purple background
+    export git_clean="\e[1;38;05;46m"           # Green
+    export git_dirty="\e[1;38;05;160m"          # Red
+    unset git_color
+
+    ## Determine if use is root or not
+    test $UID -eq 0 && local bg_color='root_bg' || local bg_color='user_bg'
+
+    ## Combine styles (Using \[ and \] around colors is necessary to prevent issues with command line editing/browsing/completion!)
+    export prefix="\[$fgb${!bg_color}\] $USER \[$fgr$dir_bg\] "
+    export suffix="> \[$N\]"
+}
+
+function get_git_branch {
+    git branch &>/dev/null
+    if [[ $? -eq 0 ]]; then
+        local git_output=""
+        test -z "$(git status -s)" && git_output+="$git_clean" || git_output+="$git_dirty"
+        git_output+="$(git branch | grep '*' | awk '{print $2}')"
+        test -z "$(git stash list)" || git_output+=" $"
+        printf "$git_output"
+    fi
+}
+
+# Run this function every time the prompt is displayed to update the variables
+PROMPT_COMMAND="show_prompt"
+
+# Run the function once to pre-load variables
+show_prompt
+
+# Set the prompt
+export PS1="$prefix"
+PS1+="\$(shorten_pwd)"
+PS1+=" \[$git_style\] ["
+PS1+="\$(get_git_branch)"
+PS1+="\[$git_style\]]"
+PS1+="$suffix"
+
+## Bash Prompt End
 
 
 ## Include local_env.sh
-touch ~/bin/local_env.sh
+if [[ ! -f ~/bin/local_env.sh ]]; then
+    touch ~/bin/local_env.sh
+fi
 source ~/bin/local_env.sh
