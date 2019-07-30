@@ -6,6 +6,7 @@
 | gm            | Show this help menu                                           |
 | gmenu         | Show this help menu                                           |
 | gh            | Shortcut for git help                                         |
+| gha           | Shortcut for git help -a                                      |
 | g.            | Stage all changes and do a git status                         |
 | ga            | Shortcut for "git add"                                        |
 | gac           | Stage files, commit (prompt for message) and push             |
@@ -41,7 +42,7 @@
 | gsu           | Update all submodules                                         |
 | gu            | Look for git updates                                          |
 | gitflow       | Configure or fix Git Flow for the current project             |
-| new           | Create a new branch with upstream tracking                    |
+| branch        | Create a new branch or checkout existing branch               |
 | stash         | Stash current changes                                         |
 | restore       | Restore latest stashed changes                                |
 | wip           | Make a "Work in Progress" commit with a message of "WIP"      |
