@@ -82,6 +82,7 @@ alias rp='chown -R www-data:www-data .'
 alias a='php artisan'
 alias r='a route:list'
 alias routes='a route:list'
+alias newproject='f(){ composer create-project --prefer-dist laravel/laravel .; }; f'
 
 ## Symfony
 alias bc='bin/console --ansi'
