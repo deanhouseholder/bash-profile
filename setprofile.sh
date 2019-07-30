@@ -36,7 +36,7 @@ fi
 
 # Add a .vimrc file to always turn on syntax highlighting
 if [[ ! -s ~/.vimrc ]]; then
-  echo "synax on" > ~/.vimrc
+  echo "syntax on" > ~/.vimrc
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
