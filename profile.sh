@@ -28,15 +28,13 @@ else
 fi
 
 ## Exports
-export PATH=$PATH:~/bin
+if [[ "$(echo $PATH | grep ~/bin | wc -l)" -eq 0 ]]; then
+  export PATH=$PATH:~/bin
+fi
 export TERM='xterm-256color'
 export PROFILE_SH_PATH="$BASH_SOURCE"
 export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
-if [[ $bash_env == 'mac' ]]; then
-  export LS_OPTIONS='-GF'
-else
-  export LS_OPTIONS='--color=auto -F'
-fi
+export LS_OPTIONS='--color=auto -F'
 source ~/bin/git-completion.bash
 
 ## Turn off CTRL+S mode
@@ -68,11 +66,6 @@ alias up3='cd ../../..'
 alias up4='cd ../../../..'
 alias up5='cd ../../../../..'
 
-## PHP
-alias c='composer'
-alias cl='c list'
-alias cr='c require'
-
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls -lh'
 alias logs='cd /var/log/apache2/ && ls'
@@ -93,6 +86,12 @@ alias dcfg='bc debug:config'
 alias dcfgf='bc debug:config framework'
 alias cdump='bc config:dump'
 alias cdumpf='bc config:dump framework'
+
+## PHP
+alias c='composer'
+alias cl='c list'
+alias cr='c require'
+alias cc='c clearcache;c dumpautoload;if [[ -f artisan ]];then a clear-compiled;a optimize;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
 
 ## Vagrant
 if [[ $bash_env != "vagrant" ]]; then
@@ -116,7 +115,10 @@ which winpty &>/dev/null
 [[ $? == 0 ]] && WINPTY='winpty ' || WINPTY=''
 alias doc="${WINPTY}docker"
 alias dc='docker-compose'
-alias dps='doc ps'
+alias dm='docker-machine'
+alias dmnative='echo "Switching native docker"; eval $(docker-machine env -u)'
+alias dssh='f(){ docker exec -it -u root $1 bash; }; f'
+alias dps='doc ps -a'
 alias dup='dc up -d'
 alias ddown='dc stop'
 alias dssh='doc run -it app1 /bin/bash'
@@ -126,11 +128,13 @@ alias g='git'
 alias gm='display_alias_menu "git-menu.md" "Git Shortcuts Menu"'
 alias gmenu='gm'
 alias gh='git help'
+alias gha='git help -a'
 alias g.='git add . && gs'
 alias ga='git add'
 alias gac='git add . && git commit && git push'
 alias gad='git status -s | awk '"'"'{print $2}'"'"''
 alias gb='git branch -a'
+alias gback='git checkout -'
 alias gc='git commit'
 alias gca='git commit -a --amend -C HEAD'
 alias gcm='git checkout master'
@@ -142,6 +146,7 @@ alias gcr='f(){ git checkout release/$1 2>/dev/null; git branch -u origin/releas
 alias gcs='f(){ git checkout support/$1 2>/dev/null; git branch -u origin/support/$1 support/$1 >/dev/null; }; f'
 alias gd='git diff'
 alias gf='git fetch'
+alias ghash='git branch --contains'
 alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
 alias gl='git log --graph --decorate'
 alias glg='git log --oneline --graph --decorate'
@@ -161,24 +166,67 @@ alias gss='git submodule status'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
 alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
-alias branch='f(){ git checkout -b $1 2>/dev/null || git checkout $1; git branch -u origin/$1 $1 2>/dev/null; gp; git push --set-upstream origin $1; }; f'
+alias branch='f(){ test -z "$1" && echo "No branch name given." && return; git checkout -b $1 2>/dev/null || git checkout $1; git branch -u origin/$1 $1 2>/dev/null; gp; git push --set-upstream origin $1; }; f'
 alias stash='git stash'
 alias restore='git stash pop'
 alias wip='git commit -am "WIP"'
 
-## Useful Functions
-alias cc='f(){ php ~/bin/composer clearcache;if [[ -f artisan ]]; then a clear-compiled;a optimize;a cache:clear;a config:clear;a route:clear;a view:clear;c clearcache;c dumpautoload;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;c clearcache;c dumpautoload;fi }; f'
 
-alias gphp='f(){ find . -type f -name "*.php" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
-alias gcss='f(){ find . -type f -name "*.css" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
-alias gjs='f(){ find . -type f -name "*.js" -exec grep -inHo "$1" \{\} \; | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }; f'
-alias searchfiles='f(){ find . -type f -name "$1" -exec grep -nHo "$2" \{\} \;; }; f'
-alias searchfilesi='f(){ find . -type f -name "$1" -exec grep -inHo "$2" \{\} \;; }; f'
-search(){ \grep -RHn "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
-searchi(){ \grep -RHin "$1" | grep -v '^Binary' | uniq | sed -r "s/^([^:]*):([0-9]*):.*$/\1\t:\2/g" | column -t; }
-searchcount(){ \grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c; }
-searchcounti(){ \grep -RHin "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c; }
-change_title(){ printf '\033]2;'$1'\007'; }
+# Recursive File Search function
+# $1 = File pattern (ex: *.js)
+# $2 = String to search for
+# $3 = (optional) Set to 1 for case-insensitive search
+search(){
+  # Define Vars
+  local SEP='ᚦ' # Obscure ascii character not likely to appear in files
+  local BOLD='\e[4m\e[1m'
+  local END='\e[m\e[K'
+  local PLAIN='\e[15m\e[K'
+  local HEADING="${BOLD}\e[37m"
+  local HEADER="${END}${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}\n"
+  local FILTER="s/^([^:]*):([^:]+):(.*)$/\2$SEP\1$SEP\3/g"
+  local CASE_SENSITIVE=''
+
+  # Check user input
+  if [[ -z "$1" ]] || [[ -z "$2" ]]; then
+    local ERROR="${BOLD}\e[37m\e[41m"
+    local MESSAGE="${BOLD}\e[36m"
+    local USAGE="\n${HEADING}Recursive File Search${END}\n\n"
+    USAGE="${USAGE}${ERROR}Error: %s${END}\n\n${MESSAGE}Usage:\n${END}"
+    USAGE="${USAGE}search \"[file pattern]\" \"[search string]\" [insensitive]\n\n"
+    USAGE="${USAGE}${MESSAGE}Examples:${END}\n"
+    USAGE="${USAGE}search '*.js' 'undefined' 1\n"
+    USAGE="${USAGE}search '*.log' 'Fatal Error:'\n\n"
+    test -z "$1" && printf "$USAGE" "No file pattern given" && return 1
+    test -z "$2" && printf "$USAGE" "No search string given" && return 1
+  fi
+  test "$3" == '1' && CASE_SENSITIVE='i'
+
+  # Perform Search
+  echo
+  ( printf "$HEADER" "Line" "File Path" "Search Results"
+    printf "$HEADER" "----" "---------" "---------------"
+    find . -type f -name "$1" -exec grep -${CASE_SENSITIVE}nH --color=always "$2" {} \; | grep -v '^Binary' | uniq | sed -r -e "$FILTER"
+  ) | column -t -s "$SEP"
+  echo
+}
+
+gphp(){ search '*.php' "$1"; }
+gphpi(){ search '*.php' "$1" 1; }
+gcss(){ search '*.css' "$1"; }
+gcssi(){ search '*.css' "$1" 1; }
+gjs(){ search '*.js' "$1"; }
+gjsi(){ search '*.js' "$1" 1; }
+searchall(){ search '*' "$1"; }
+searchalli(){ search '*' "$1" 1; }
+searchcount(){ echo; printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; echo; }
+searchcounti(){ printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -iRHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; }
+
+
+## Useful Functions
+# Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
+mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
+change_title(){ printf '\033]2;%s\007' "$(echo $@)"; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
 gitflow() {

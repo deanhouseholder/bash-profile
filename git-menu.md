@@ -12,6 +12,7 @@
 | gac           | Stage files, commit (prompt for message) and push             |
 | gad           | Display a list of new files (unknown to git)                  |
 | gb            | List all branches                                             |
+| gback         | Switch back the previous branch                               |
 | gc            | Shortcut to "git commit"                                      |
 | gca           | Commit the latest changes as an ammendment to the last commit |
 | gcm           | Checkout the master branch                                    |
@@ -23,6 +24,7 @@
 | gcs           | Checkout an existing support branch (assumes "support/")      |
 | gd            | Shortcut for "git diff"                                       |
 | gf            | Shortcut for "git fetch"                                      |
+| ghash         | Find the branch that contains a specific commit hash          |
 | gitcred       | Configure git's credential helper path to ~/.git-credentials  |
 | gl            | Commit log with colored output                                |
 | glg           | Commit log with graph (one line per commit)                   |
