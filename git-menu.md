@@ -38,6 +38,7 @@
 | grm           | Remove all files new files (unknown to git)                   |
 | greset        | Full reset of current branch to last commit including deletes |
 | grh           | Hard reset of current branch (or any ref you specify)         |
+| gum           | Pull latest master (even from a dirty branch)                 |
 | gs            | Git Status (ignoring submodules for speed)                    |
 | gsa           | Git Status of all files/submodules                            |
 | gss           | Get the status of all submodules                              |
