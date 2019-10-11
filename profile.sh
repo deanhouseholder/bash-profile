@@ -42,6 +42,7 @@ stty -ixon
 
 ## Aliases
 alias vi='vim'
+alias l='vi ~/bin/local_env.sh'
 alias ls='\ls $LS_OPTIONS'
 alias d='ls'
 alias da='ls -a'
@@ -363,57 +364,96 @@ big () {
 }
 
 
-## Load SSH Agent/Install SSH Key
-if [[ -f ~/.ssh/id_rsa ]] && [[ -f ~/.ssh/.pkey ]]; then
-  if [[ -S /tmp/ssh-agent.sock ]]; then
-    agent_running=$(\ps | grep [s]sh-agent | awk '{print $2}' | wc -l)
-    if [[ $agent_running == 0 ]]; then
-      rm /tmp/ssh-agent.sock
-    fi
-  fi
-  ssh-agent -a /tmp/ssh-agent.sock -s >/dev/null 2>&1
-  export SSH_AUTH_SOCK=/tmp/ssh-agent.sock
-  cat ~/.ssh/id_rsa | SSH_ASKPASS=~/.ssh/.pkey DISPLAY= ssh-add - 2>/dev/null
-fi
-
-
 ## Bash Prompt Start
 
 # Function to shorten the directory
 function shorten_pwd {
-  test ${#PWD} -gt 40 && echo "$PWD" | awk -F/ '{print "/"$2"/["(NF-4)"]/"$(NF-1)"/"$NF}' || pwd
+  test ${#PWD} -gt 40 && pwd | awk -F/ '{print "/"$2"/["(NF-4)"]/"$(NF-1)"/"$NF}' || pwd
 }
 
 function show_prompt {
-    ## Prompt Colors
-    local fgr="\e[0;37m"                        # Foreground White Regular
-    local fgb="\e[1;37m"                        # Foreground White Bold
-    local root_bg="\e[48;5;130m"                # Orange
-    local user_bg="\e[48;5;39m"                 # Blue
-    local dir_bg="\e[48;5;236m"                 # Dark Gray
-    local N="\e[0m"                             # Reset styles
-    export git_style="\e[01;38;05;15;48;05;55m" # Foreground White Bold, Purple background
-    export git_clean="\e[1;38;05;46m"           # Green
-    export git_dirty="\e[1;38;05;160m"          # Red
-    unset git_color
+  ## Prompt Colors
+  fgr="\e[0;37m"                        # Foreground White Regular
+  fgb="\e[1;37m"                        # Foreground White Bold
+  root_bg="\e[48;5;130m"                # Orange
+  user_bg="\e[48;5;24m"                 # Blue
+  dir_bg="\e[48;5;236m"                 # Dark Gray
+  box_bg="\e[48;5;30m"                  # Blue-Green
+  N="\e[0m"                             # Reset styles
+  export git_style="\e[0;38;05;15;48;05;54m"  # Foreground White Bold, Purple background
+  export git_clean="\e[1;38;05;46m"           # Green
+  export git_dirty="\e[1;38;05;160m"          # Red
+  export git_ignored="\e[1;38;05;243m"        # Gray
+  unset git_color
+  test -f ~/.displayname && box="$(cat ~/.displayname)"
 
-    ## Determine if use is root or not
-    test $UID -eq 0 && local bg_color='root_bg' || local bg_color='user_bg'
+  ## Determine if user is root or not
+  test $UID -eq 0 && bg_color='root_bg' || bg_color='user_bg'
 
-    ## Combine styles (Using \[ and \] around colors is necessary to prevent issues with command line editing/browsing/completion!)
-    export prefix="\[$fgb${!bg_color}\] $USER \[$fgr$dir_bg\] "
-    export suffix="> \[$N\]"
+  # Check if current directory is a git repo
+  $(git status &>/dev/null)
+  if [[ $? -eq 0 ]]; then
+    export gstatus=1
+    export gbranch=$(git branch --show-current)
+  else
+    export gstatus=0
+    export gbranch=""
+  fi
+
+  ## Combine styles (Using \[ and \] around colors is necessary to prevent issues with command line editing/browsing/completion!)
+  export prefix="\[$fgr\]\[${!bg_color}\] $USER \[$fgr\]\[$box_bg\] $box \[$fgr\]\[$dir_bg\] "
+  export suffix="> \[$N\]"
 }
 
-function get_git_branch {
-    git branch &>/dev/null
-    if [[ $? -eq 0 ]]; then
-        local git_output=""
-        test -z "$(git status -s)" && git_output+="$git_clean" || git_output+="$git_dirty"
-        git_output+="$(git branch | grep '*' | awk '{print $2}')"
-        test -z "$(git stash list)" || git_output+=" $"
-        printf "$git_output"
+# Done:
+# dirty = color red/green
+# ahead/behind/current
+# stashes exist = $
+# in an ignored dir = color grey
+# in .git dir  = color inverse red
+# in a detached head (just branch name?)
+
+# To-Do:
+# Status: MERGING, CHERRY-PICKING, REVERTING, BISECTING, REBASING
+# in a submodule = color diff background
+# in a repo with no remotes = color diff background
+
+function git_bg {
+  if [[ "$gstatus" -eq 1 ]]; then
+    # Check if in an ignored directory
+    if [[ "$(git check-ignore .)" == '.' ]]; then
+      printf "$git_ignored"
+      return
     fi
+    test -z "$(git status -s)" && printf "$git_clean" || printf "$git_dirty"
+  else
+    printf "$git_dirty"
+  fi
+}
+
+function git_branch {
+  if [[ "$gstatus" -eq 1 ]]; then
+    printf "$gbranch"
+    output=''
+
+    # Stashes
+    test -z "$(git stash list)" || output+='$'
+
+    # Branch ahead or behind
+    stream="$(git status | grep 'Your branch')"
+    if [[ "$stream" =~ .*is\ behind.* ]]; then
+      output+="<$(printf "$stream" | sed -e 's~[^0-9]*\([0-9]\+\).*~\1~g')"
+    elif [[ "$stream" =~ .*is\ ahead.* ]]; then
+      output+=">$(printf "$stream" | sed -e 's~[^0-9]*\([0-9]\+\).*~\1~g')"
+    fi
+
+    # If anything got added to the output var, print it w/ a space
+    test -z "$output" || printf " $output"
+  else
+    if [[ "$PWD" =~ .*/\.git.* ]]; then
+      printf "!GIT DIR"
+    fi
+  fi
 }
 
 # Run this function every time the prompt is displayed to update the variables
@@ -426,7 +466,8 @@ show_prompt
 export PS1="$prefix"
 PS1+="\$(shorten_pwd)"
 PS1+=" \[$git_style\] ["
-PS1+="\$(get_git_branch)"
+PS1+="\[\$(git_bg)\]"
+PS1+="\$(git_branch)"
 PS1+="\[$git_style\]]"
 PS1+="$suffix"
 
