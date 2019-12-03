@@ -11,7 +11,6 @@ file_profile=$dir_bin/profile.sh
 file_git_menu=$dir_bin/git-menu.md
 file_local_env=$dir_bin/local_env.sh
 file_git_completion=$dir_bin/git-completion.bash
-file_key=$dir_ssh/.pkey
 url_git_completion="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
 url_git_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_menu="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
@@ -32,6 +31,15 @@ if [[ $(grep "EDITOR=" $file_local_env | wc -l) -eq 0 ]]; then
   test -z $editor && editor=vim
   echo "export EDITOR=$editor" >> $file_local_env
   echo
+fi
+
+if [[ ! -f ~/.displayname ]]; then
+  printf "What name would you like to give this server to be displayed in the title and prompt?\n"
+  read server_name
+  if [[ ! -z "$server_name" ]]; then
+    printf "\nalias set_title='change_title $server_name'\nset_title\n" >> $file_local_env
+    echo "$server_name" > ~/.displayname
+  fi
 fi
 
 # Add a .vimrc file to always turn on syntax highlighting
@@ -91,29 +99,6 @@ fi
 # Set up ssh key passphrase
 mkdir -p $dir_ssh
 chmod 700 $dir_ssh
-
-if [[ ! -f $file_key ]]; then
-  # Read password
-  prompt="Enter SSH Key Passphrase: "
-  while IFS= read -p "$prompt" -r -s -n 1 char
-  do
-    if [[ $char == $'\0' ]]; then
-        break
-    elif [[ $char == $'\177' ]]; then
-        prompt=$'\b \b'
-        pass="${pass%?}"
-    else
-      prompt='*'
-      pass+="$char"
-    fi
-  done
-  printf "\n\n\n"
-
-  # Add password to key_file
-  echo "echo \"$pass\"" > $file_key
-  unset pass
-  chmod 700 $file_key
-fi
 
 unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_key url_git_completion url_git_profile url_git_menu editor use_git user_name user_email update_git prompt char pass
 
