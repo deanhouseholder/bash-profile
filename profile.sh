@@ -34,7 +34,7 @@ fi
 export TERM='xterm-256color'
 export PROFILE_SH_PATH="$BASH_SOURCE"
 export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
-export LS_OPTIONS='--color=auto -F'
+export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
 source ~/bin/git-completion.bash
 
 ## Turn off CTRL+S mode
@@ -90,9 +90,14 @@ alias cdumpf='bc config:dump framework'
 
 ## PHP
 alias c='composer'
-alias cl='c list'
+alias ci='c install'
+alias cu='c update'
 alias cr='c require'
-alias cc='c clearcache;c dumpautoload;if [[ -f artisan ]];then a clear-compiled;a optimize;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
+alias cc='c clear-cache;c dump-autoload;if [[ -f artisan ]];then a clear-compiled;a optimize:clear;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
+
+## NPM
+alias n='npm'
+alias ni='npm install'
 
 ## Vagrant
 if [[ $bash_env != "vagrant" ]]; then
@@ -227,10 +232,28 @@ searchcounti(){ printf "\nMatches\tFilename\n-----\t----------------------------
 
 ## Useful Functions
 # Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
-mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
 change_title(){ printf '\033]2;%s\007' "$(echo $@)"; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
+mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
+
+# Show what a command with aliases is actually executing
+show_cmd(){
+  cmd="eval "
+  for i in "$@"; do
+    if [[ "$i" =~ .*[[:space:]].* ]]; then
+      # Argument came in with a space so restore quotes around it
+      cmd+='"'$i'" '
+    else
+      cmd+=$i' '
+    fi
+  done
+  reset=$(shopt -p expand_aliases); # Determine initial state of expand_aliases
+  shopt -s expand_aliases; # Set expand_aliases to "on"
+  (set -x; $cmd; set +x;) 2>&1 | sed -e '1d' -e 's/$d/OUTPUT:/' -e 's/^++/COMMAND:/g';
+  $reset; # Reset expand_aliases to original value
+}
+
 gitflow() {
     GIT_FLOW_CONFIG="master\ndevelop\nfeature/\nbugfix/\nrelease/\nhotfix/\nsupport/\n\n\n"
     # Check to see if git flow is initialized and is correctly configured
@@ -252,7 +275,6 @@ gitflow() {
       printf "$GIT_FLOW_CONFIG" | git flow init -f >/dev/null
     fi
 }
-
 
 ## Display Alias Menu
 display_alias_menu() {
