@@ -11,9 +11,11 @@ file_profile=$dir_bin/profile.sh
 file_git_menu=$dir_bin/git-menu.md
 file_local_env=$dir_bin/local_env.sh
 file_git_completion=$dir_bin/git-completion.bash
+file_git_prompt=$dir_bin/gitprompt.sh
 url_git_completion="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
 url_git_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_menu="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
+url_git_prompt="https://raw.githubusercontent.com/deanhouseholder/gitprompt/master/gitprompt.sh"
 
 # Start install script
 printf "\nStarting configuration of bash profile\n\n"
@@ -58,6 +60,7 @@ if [[ ! "$use_git" =~ [nN][oO]? ]]; then
     curl "$url_git_completion" -o $file_git_completion 2>/dev/null
     curl "$url_git_menu" -o $file_git_menu 2>/dev/null
     curl "$url_git_profile" -o $file_profile 2>/dev/null
+    curl "url_git_prompt" -o $file_git_prompt 2>/dev/null
 
     # Configure git settings
     if [[ -z "$(git config --global user.name)" ]]; then

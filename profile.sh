@@ -1,3 +1,12 @@
+## Exports
+if [[ "$(echo $PATH | grep ~/bin | wc -l)" -eq 0 ]]; then
+  export PATH=$PATH:~/bin
+fi
+export TERM='xterm-256color'
+export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
+export PROFILE_SH_PATH="$BASH_SOURCE"
+export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
+
 ## Detect Environment and set vars
 OSVER="$(cat /proc/version 2>/dev/null)"
 
@@ -27,21 +36,11 @@ else
   export dir_prefix='/'
 fi
 
-## Exports
-if [[ "$(echo $PATH | grep ~/bin | wc -l)" -eq 0 ]]; then
-  export PATH=$PATH:~/bin
-fi
-export TERM='xterm-256color'
-export PROFILE_SH_PATH="$BASH_SOURCE"
-export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
-export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
-source ~/bin/git-completion.bash
-
 ## Turn off CTRL+S mode
 stty -ixon
 
 ## Aliases
-alias vi='vim'
+alias vi='vim "+syntax on"'
 alias l='vi ~/bin/local_env.sh'
 alias ls='\ls $LS_OPTIONS'
 alias d='ls'
@@ -55,28 +54,52 @@ alias cls='printf "\033c"'
 alias reload='. ~/bin/profile.sh'
 alias p='$EDITOR ~/bin/profile.sh'
 alias s='sudo su -'
-alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s \n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n$OUT\n" | column -t'
-alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); printf "Location Used Free Format \n$OUT\n" | column -t'
-alias reboot?='[[ -f /var/run/reboot-required ]] && cat /var/run/reboot-required || echo "No need to reboot."'
+alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s\n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n%s\n" "$OUT" | column -t'
+alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); printf "Location Used Free Format \n%s\n" "$OUT" | column -t'
+alias reboot?='[[ -f /var/run/reboot-required ]] && echo "Reboot required" || echo "No need to reboot."'
 alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"''
 alias bin='cd ~/bin'
-alias ut='cd /'
-alias up='cd ..'
+
+# up will cd up a directory or if you pass in a number it will cd up that many times
+function up() {
+  if [[ -z "$1" ]]; then
+    cd ..
+  else
+    if [[ "$(is_num $1)" == 1 ]]; then
+      cd $(for i in $(seq $1); do printf "../"; done)
+    else
+      printf "You must enter a valid number.\n"
+    fi
+  fi
+}
 alias up2='cd ../..'
 alias up3='cd ../../..'
 alias up4='cd ../../../..'
 alias up5='cd ../../../../..'
+alias up6='cd ../../../../../..'
+alias up7='cd ../../../../../../..'
+alias up8='cd ../../../../../../../..'
+alias up9='cd ../../../../../../../../..'
+alias up10='cd ../../../../../../../../../..'
+alias ut='cd /'
 
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls -lh'
 alias logs='cd /var/log/apache2/ && ls'
 alias rp='chown -R www-data:www-data .'
 
+## Composer
+alias c='composer'
+alias ci='c install'
+alias cu='c update'
+alias cr='c require'
+alias cc='c clear-cache;c dump-autoload;if [[ -f artisan ]];then a clear-compiled;a optimize:clear;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
+
 ## Laravel
 alias a='php artisan'
 alias r='a route:list'
 alias routes='a route:list'
-alias newproject='f(){ composer create-project --prefer-dist laravel/laravel .; }; f'
+alias newproject='f(){ c create-project --prefer-dist laravel/laravel .; }; f'
 
 ## Symfony
 alias bc='bin/console --ansi'
@@ -87,13 +110,6 @@ alias dcfg='bc debug:config'
 alias dcfgf='bc debug:config framework'
 alias cdump='bc config:dump'
 alias cdumpf='bc config:dump framework'
-
-## PHP
-alias c='composer'
-alias ci='c install'
-alias cu='c update'
-alias cr='c require'
-alias cc='c clear-cache;c dump-autoload;if [[ -f artisan ]];then a clear-compiled;a optimize:clear;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
 
 ## NPM
 alias n='npm'
@@ -151,6 +167,8 @@ alias gch='f(){ git checkout hotfix/$1 2>/dev/null; git branch -u origin/hotfix/
 alias gcr='f(){ git checkout release/$1 2>/dev/null; git branch -u origin/release/$1 release/$1 >/dev/null; }; f'
 alias gcs='f(){ git checkout support/$1 2>/dev/null; git branch -u origin/support/$1 support/$1 >/dev/null; }; f'
 alias gd='git diff'
+# add an alias to diff a file between revisions:
+# git diff HEAD~4 HEAD~3 app/Jobs/ImportContacts.php
 alias gf='git fetch'
 alias ghash='git branch --contains'
 alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
@@ -167,9 +185,9 @@ alias grm='gad | xargs rm -r 2>/dev/null'
 alias greset='gr && grm'
 alias grh='git reset --hard'
 alias gum='git stash; git checkout master; git pull; git checkout -; git stash pop'
-alias gs='clear && git status --ignore-submodules'
-alias gsa='clear && git status'
-alias gss='git submodule status'
+alias gs='clear && git status --ignore-submodules 2>/dev/null'
+alias gsa='clear && git status 2>/dev/null'
+alias gss='git submodule status 2>/dev/null'
 alias gsu='git submodule update'
 alias gu='git update-git-for-windows'
 alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
@@ -178,11 +196,10 @@ alias stash='git stash'
 alias restore='git stash pop'
 alias wip='git commit -am "WIP"'
 
-
 # Recursive File Search function
-# $1 = File pattern (ex: *.js)
-# $2 = String to search for
-# $3 = (optional) Set to 1 for case-insensitive search
+# $1 = Search string
+# $2 = (optional) File pattern (ex: *.js) (default is: *)
+# $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
 search(){
   # Define Vars
   local SEP='ᚦ' # Obscure ascii character not likely to appear in files
@@ -191,39 +208,42 @@ search(){
   local PLAIN='\e[15m\e[K'
   local HEADING="${BOLD}\e[37m"
   local HEADER="${END}${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}\n"
-  local FILTER="s/^([^:]*):([^:]+):(.*)$/\2$SEP\1$SEP\3/g"
+  local FILTER="s/^([^:]*):([^:]+):\s*(.*)$/\2$SEP\1$SEP\3/g"
+  local SEARCH="$1"
+  local NAME='*'
   local CASE_SENSITIVE=''
 
   # Check user input
-  if [[ -z "$1" ]] || [[ -z "$2" ]]; then
+  if [[ -z "$1" ]]; then
     local ERROR="${BOLD}\e[37m\e[41m"
     local MESSAGE="${BOLD}\e[36m"
     local USAGE="\n${HEADING}Recursive File Search${END}\n\n"
     USAGE="${USAGE}${ERROR}Error: %s${END}\n\n${MESSAGE}Usage:\n${END}"
-    USAGE="${USAGE}search \"[file pattern]\" \"[search string]\" [insensitive]\n\n"
+    USAGE="${USAGE}search \"[search string]\" \"[file pattern]\" [insensitive]\n\n"
     USAGE="${USAGE}${MESSAGE}Examples:${END}\n"
-    USAGE="${USAGE}search '*.js' 'undefined' 1\n"
-    USAGE="${USAGE}search '*.log' 'Fatal Error:'\n\n"
-    test -z "$1" && printf "$USAGE" "No file pattern given" && return 1
-    test -z "$2" && printf "$USAGE" "No search string given" && return 1
+    USAGE="${USAGE}search \"undefined\" '*.js' 1\n"
+    USAGE="${USAGE}search 'Fatal Error:' '*.log'\n\n"
+    test -z "$1" && printf "$USAGE" "No search string given" && return 1
   fi
+  test -z "$2" || NAME="$2"
   test "$3" == '1' && CASE_SENSITIVE='i'
 
   # Perform Search
   echo
   ( printf "$HEADER" "Line" "File Path" "Search Results"
     printf "$HEADER" "----" "---------" "---------------"
-    find . -type f -name "$1" -exec grep -${CASE_SENSITIVE}nH --color=always "$2" {} \; | grep -v '^Binary' | uniq | sed -r -e "$FILTER"
+    find . -type f -name "$NAME" -exec grep -${CASE_SENSITIVE}nH --color=always "$SEARCH" {} \; \
+      | grep -v '^Binary' | uniq | sed -r -e "$FILTER"
   ) | column -t -s "$SEP"
   echo
 }
 
-gphp(){ search '*.php' "$1"; }
-gphpi(){ search '*.php' "$1" 1; }
-gcss(){ search '*.css' "$1"; }
-gcssi(){ search '*.css' "$1" 1; }
-gjs(){ search '*.js' "$1"; }
-gjsi(){ search '*.js' "$1" 1; }
+sphp(){ search '*.php' "$1"; }
+sphpi(){ search '*.php' "$1" 1; }
+scss(){ search '*.css' "$1"; }
+scssi(){ search '*.css' "$1" 1; }
+sjs(){ search '*.js' "$1"; }
+sjsi(){ search '*.js' "$1" 1; }
 searchall(){ search '*' "$1"; }
 searchalli(){ search '*' "$1" 1; }
 searchcount(){ echo; printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; echo; }
@@ -231,29 +251,50 @@ searchcounti(){ printf "\nMatches\tFilename\n-----\t----------------------------
 
 
 ## Useful Functions
-# Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
-change_title(){ printf '\033]2;%s\007' "$(echo $@)"; }
-find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
-is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; } # Returns "0" for binary and "1" for text
-mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
 
-# Show what a command with aliases is actually executing
-show_cmd(){
-  cmd="eval "
-  for i in "$@"; do
-    if [[ "$i" =~ .*[[:space:]].* ]]; then
-      # Argument came in with a space so restore quotes around it
-      cmd+='"'$i'" '
-    else
-      cmd+=$i' '
-    fi
-  done
-  reset=$(shopt -p expand_aliases); # Determine initial state of expand_aliases
-  shopt -s expand_aliases; # Set expand_aliases to "on"
-  (set -x; $cmd; set +x;) 2>&1 | sed -e '1d' -e 's/$d/OUTPUT:/' -e 's/^++/COMMAND:/g';
-  $reset; # Reset expand_aliases to original value
+# Replace cd functionality to use pushd instead. If file is given, open in default editor.
+cd(){
+  if [[ "$#" == "0" ]]; then
+    pushd $HOME 1>/dev/null
+  elif [[ -f "$1" ]]; then
+    $EDITOR $1
+  elif [[ "$1" =~ ^\-+$ ]]; then
+    # support multiple dashes and go back through dir stack for each one
+    bd ${#1} 1>/dev/null
+  elif [[ -d "$1" ]]; then
+    pushd "$1" 1>/dev/null
+  else
+    printf "cd $1: No such file or directory\n"
+  fi
 }
 
+# Add a "back directory" function to change back (with popd) any number of directories
+bd(){
+  if [[ -z "$1" ]]; then
+    popd &>/dev/null
+  else
+    for i in $(seq $1); do
+      popd &>/dev/null
+    done
+  fi
+}
+
+# Return 1 for a number and 0 otherwise
+is_num() { if [[ "$1" =~ [0-9]+ ]]; then echo 1; else echo 0; fi; }
+
+# Returns 0 for binary and 1 for text
+is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; }
+
+# Set the window title to function arguments
+change_title(){ printf '\033]2;%s\007' "$(echo $@)"; }
+
+# Find a file or directory through parent directories
+find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
+
+# Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
+mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
+
+# Set up or Fix a git flow directory
 gitflow() {
     GIT_FLOW_CONFIG="master\ndevelop\nfeature/\nbugfix/\nrelease/\nhotfix/\nsupport/\n\n\n"
     # Check to see if git flow is initialized and is correctly configured
@@ -276,11 +317,12 @@ gitflow() {
     fi
 }
 
+
 ## Display Alias Menu
 display_alias_menu() {
 
   repeat_string() {
-    printf "%0.s$1" $(seq 1 $2)
+    printf "%0.s$1" $(seq $2)
   }
 
   # Get Aliases from .md file passed in
@@ -372,6 +414,7 @@ e () {
   printf "\nDone\n\n"
 }
 
+
 ## ls with octal permission labels
 lso () {
   test -z "$1" && dirname="." || dirname="$1"
@@ -385,97 +428,57 @@ big () {
   cd - >/dev/null
 }
 
-
 ## Bash Prompt Start
+
+alias r='reload'
 
 # Function to shorten the directory
 function shorten_pwd {
   test ${#PWD} -gt 40 && pwd | awk -F/ '{print "/"$2"/["(NF-4)"]/"$(NF-1)"/"$NF}' || pwd
 }
 
+# Print a foreground color that is properly-escaped for PS1 prompts
+fg() {
+  printf "\[\e[38;5;$1m\]"
+}
+
+# Print a background color that is properly-escaped for PS1 prompts
+bg() {
+  printf "\[\e[48;5;$1m\]"
+}
+
+# Reset the colors to default in the PS1 prompt
+norm() {
+  printf "\[\e[0m\]"
+}
+
+# Include the Git Prompt functions
+. ~/bin/gitprompt/gitprompt.sh
+
 function show_prompt {
-  ## Prompt Colors
-  fgr="\e[0;37m"                        # Foreground White Regular
-  fgb="\e[1;37m"                        # Foreground White Bold
-  root_bg="\e[48;5;130m"                # Orange
-  user_bg="\e[48;5;24m"                 # Blue
-  dir_bg="\e[48;5;236m"                 # Dark Gray
-  box_bg="\e[48;5;30m"                  # Blue-Green
-  N="\e[0m"                             # Reset styles
-  export git_style="\e[0;38;05;15;48;05;54m"  # Foreground White Bold, Purple background
-  export git_clean="\e[1;38;05;46m"           # Green
-  export git_dirty="\e[1;38;05;160m"          # Red
-  export git_ignored="\e[1;38;05;243m"        # Gray
-  unset git_color
-  test -f ~/.displayname && box="$(cat ~/.displayname)"
+  ## Define Colors
+  local fgr="$(fg 253)"                       # FG: White
+  local root_bg="$(bg 130)"                   # BG: Orange
+  local user_bg="$(bg 24)"                    # BG: Blue
+  local dir_bg="$(bg 236)"                    # BG: Dark Gray
+  local host_bg="$(bg 30)"                    # BG: Blue-Green
+  local N="$(norm)"                           # Reset styles
+
+  ## Define other vars
+  local host=""
+  test -f ~/.displayname && host="$(cat ~/.displayname)"
 
   ## Determine if user is root or not
   test $UID -eq 0 && bg_color='root_bg' || bg_color='user_bg'
 
-  # Check if current directory is a git repo
-  $(git status &>/dev/null)
-  if [[ $? -eq 0 ]]; then
-    export gstatus=1
-    export gbranch=$(git branch --show-current)
-  else
-    export gstatus=0
-    export gbranch=""
-  fi
-
   ## Combine styles (Using \[ and \] around colors is necessary to prevent issues with command line editing/browsing/completion!)
-  export prefix="\[$fgr\]\[${!bg_color}\] $USER \[$fgr\]\[$box_bg\] $box \[$fgr\]\[$dir_bg\] "
+  export prefix="\[$fgr\]\[${!bg_color}\] $USER \[$fgr\]"
+  if [[ "$host" != "" ]]; then
+    prefix+="\[$host_bg\] $host \[$fgr\]"
+  fi
+  prefix+="\[$dir_bg\] "
   export suffix="> \[$N\]"
-}
-
-# Done:
-# dirty = color red/green
-# ahead/behind/current
-# stashes exist = $
-# in an ignored dir = color grey
-# in .git dir  = color inverse red
-# in a detached head (just branch name?)
-
-# To-Do:
-# Status: MERGING, CHERRY-PICKING, REVERTING, BISECTING, REBASING
-# in a submodule = color diff background
-# in a repo with no remotes = color diff background
-
-function git_bg {
-  if [[ "$gstatus" -eq 1 ]]; then
-    # Check if in an ignored directory
-    if [[ "$(git check-ignore .)" == '.' ]]; then
-      printf "$git_ignored"
-      return
-    fi
-    test -z "$(git status -s)" && printf "$git_clean" || printf "$git_dirty"
-  else
-    printf "$git_dirty"
-  fi
-}
-
-function git_branch {
-  if [[ "$gstatus" -eq 1 ]]; then
-    printf "$gbranch"
-    output=''
-
-    # Stashes
-    test -z "$(git stash list)" || output+='$'
-
-    # Branch ahead or behind
-    stream="$(git status | grep 'Your branch')"
-    if [[ "$stream" =~ .*is\ behind.* ]]; then
-      output+="<$(printf "$stream" | sed -e 's~[^0-9]*\([0-9]\+\).*~\1~g')"
-    elif [[ "$stream" =~ .*is\ ahead.* ]]; then
-      output+=">$(printf "$stream" | sed -e 's~[^0-9]*\([0-9]\+\).*~\1~g')"
-    fi
-
-    # If anything got added to the output var, print it w/ a space
-    test -z "$output" || printf " $output"
-  else
-    if [[ "$PWD" =~ .*/\.git.* ]]; then
-      printf "!GIT DIR"
-    fi
-  fi
+  export PS1="$prefix\$(shorten_pwd) $(git_prompt)$suffix"
 }
 
 # Run this function every time the prompt is displayed to update the variables
@@ -484,20 +487,9 @@ PROMPT_COMMAND="show_prompt"
 # Run the function once to pre-load variables
 show_prompt
 
-# Set the prompt
-export PS1="$prefix"
-PS1+="\$(shorten_pwd)"
-PS1+=" \[$git_style\] ["
-PS1+="\[\$(git_bg)\]"
-PS1+="\$(git_branch)"
-PS1+="\[$git_style\]]"
-PS1+="$suffix"
-
 ## Bash Prompt End
 
 
 ## Include local_env.sh
-if [[ ! -f ~/bin/local_env.sh ]]; then
-    touch ~/bin/local_env.sh
-fi
+test ! -f ~/bin/local_env.sh && touch ~/bin/local_env.sh
 source ~/bin/local_env.sh
