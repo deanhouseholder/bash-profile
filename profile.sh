@@ -453,7 +453,7 @@ norm() {
 }
 
 # Include the Git Prompt functions
-. ~/bin/gitprompt/gitprompt.sh
+. ~/bin/gitprompt.sh
 
 function show_prompt {
   ## Define Colors
@@ -471,13 +471,12 @@ function show_prompt {
   ## Determine if user is root or not
   test $UID -eq 0 && bg_color='root_bg' || bg_color='user_bg'
 
-  ## Combine styles (Using \[ and \] around colors is necessary to prevent issues with command line editing/browsing/completion!)
-  export prefix="\[$fgr\]\[${!bg_color}\] $USER \[$fgr\]"
+  export prefix="$fgr${!bg_color} $USER $fgr"
   if [[ "$host" != "" ]]; then
-    prefix+="\[$host_bg\] $host \[$fgr\]"
+    prefix+="$host_bg $host $fgr"
   fi
-  prefix+="\[$dir_bg\] "
-  export suffix="> \[$N\]"
+  prefix+="$dir_bg "
+  export suffix="> $N"
   export PS1="$prefix\$(shorten_pwd) $(git_prompt)$suffix"
 }
 
