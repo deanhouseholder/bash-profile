@@ -60,7 +60,7 @@ if [[ ! "$use_git" =~ [nN][oO]? ]]; then
     curl "$url_git_completion" -o $file_git_completion 2>/dev/null
     curl "$url_git_menu" -o $file_git_menu 2>/dev/null
     curl "$url_git_profile" -o $file_profile 2>/dev/null
-    curl "url_git_prompt" -o $file_git_prompt 2>/dev/null
+    curl "$url_git_prompt" -o $file_git_prompt 2>/dev/null
 
     # Configure git settings
     if [[ -z "$(git config --global user.name)" ]]; then
