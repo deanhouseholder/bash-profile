@@ -471,6 +471,7 @@ function show_prompt {
   ## Determine if user is root or not
   test $UID -eq 0 && bg_color='root_bg' || bg_color='user_bg'
 
+  test -z "$USER" && export USER=$(whoami)
   export prefix="$fgr${!bg_color} $USER $fgr"
   if [[ "$host" != "" ]]; then
     prefix+="$host_bg $host $fgr"
