@@ -56,7 +56,7 @@ alias p='$EDITOR ~/bin/profile.sh'
 alias s='sudo su -'
 alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s\n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n%s\n" "$OUT" | column -t'
 alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); printf "Location Used Free Format \n%s\n" "$OUT" | column -t'
-alias reboot?='[[ -f /var/run/reboot-required ]] && echo "Reboot required" || echo "No need to reboot."'
+alias reboot?='f(){ r=/var/run/reboot-required; rp=$r.pkgs; test -f $r && (echo "Reboot required"; test -f $rp && echo -e "\nPackages updated:\n$(cat $rp)\n") || echo "No need to reboot."; }; f'
 alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"''
 alias bin='cd ~/bin'
 
@@ -253,18 +253,42 @@ searchcounti(){ printf "\nMatches\tFilename\n-----\t----------------------------
 ## Useful Functions
 
 # Replace cd functionality to use pushd instead. If file is given, open in default editor.
+#
+# You can define an array of keyword-based pre-defined directories which will work anywhere
+# Examples:
+#   "cd bin" will take you to ~/bin/
+#   "cd logs" will take you to /var/log/apache2/
+# Setup:
+#   Inside your local_env.sh script, define them in this manner:
+#     cd_array=( \
+#       'bin'='/root/bin' \
+#       'www'='/var/www' \
+#       'logs'='/var/log/apache2' \
+#       'apache'='/etc/apache2/sites-available' \
+#     )
 cd(){
   if [[ "$#" == "0" ]]; then
     pushd $HOME 1>/dev/null
   elif [[ -f "$1" ]]; then
-    $EDITOR $1
+    $EDITOR "$1"
   elif [[ "$1" =~ ^\-+$ ]]; then
     # support multiple dashes and go back through dir stack for each one
     bd ${#1} 1>/dev/null
   elif [[ -d "$1" ]]; then
     pushd "$1" 1>/dev/null
   else
-    printf "cd $1: No such file or directory\n"
+    # If an array called $cd_array is defined, loop through it and check for shortcuts
+    # matching $1 to jump to a pre-defined location instead
+    for i in "${cd_array[@]}"; do
+      keyword=$(echo "$i" | cut -d= -f1)
+      path=$(echo "$i" | cut -d= -f2)
+      test "$1" == "$keyword" && local newdir="$path" && break
+    done
+    if [[ ! -z "$newdir" ]]; then
+      pushd "$newdir" 1>/dev/null
+    else
+      printf "cd $1: No such file or directory\n"
+    fi
   fi
 }
 
@@ -292,7 +316,7 @@ change_title(){ printf '\033]2;%s\007' "$(echo $@)"; }
 find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
 
 # Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
-mp3-64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
+mp3_64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
 
 # Set up or Fix a git flow directory
 gitflow() {
