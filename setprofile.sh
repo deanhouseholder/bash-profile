@@ -12,19 +12,31 @@ file_git_menu=$dir_bin/git-menu.md
 file_local_env=$dir_bin/local_env.sh
 file_git_completion=$dir_bin/git-completion.bash
 file_git_prompt=$dir_bin/gitprompt.sh
+file_git_ssh_keys=$dir_bin/ssh-keys.sh
 url_git_completion="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
 url_git_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_menu="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
 url_git_prompt="https://raw.githubusercontent.com/deanhouseholder/gitprompt/master/gitprompt.sh"
+url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
 
 # Start install script
 printf "\nStarting configuration of bash profile\n\n"
 
+# Set up directories
 mkdir -p $dir_bin
+chmod 700 $dir_bin
+mkdir -p $dir_ssh
+chmod 700 $dir_ssh
 
 # If the local_env.sh doesn't exist or is 0 bytes
 if [[ ! -s $file_local_env ]]; then
-  echo "# Add any custom bash profile tweaks specific to this environment in this file" > $file_local_env
+  printf "# Add any custom bash profile tweaks specific to this environment in this file\n\n" > $file_local_env
+fi
+
+# Add ssh-keys.sh if it doesn't exist
+if [[ ! -f "$file_git_ssh_keys" ]]; then
+  curl "url_git_ssh_keys" -o "$file_git_ssh_keys" 2>/dev/null
+  printf "ssh_keys_load=()\nssh_keys_pass=()\nsource ~/bin/ssh-keys.sh\n\n" >> $file_local_env
 fi
 
 # If there is no EDITOR defined prompt for one
@@ -35,12 +47,13 @@ if [[ $(grep "EDITOR=" $file_local_env | wc -l) -eq 0 ]]; then
   echo
 fi
 
+# Save the machine's name to .displayname
 if [[ ! -f ~/.displayname ]]; then
   printf "What name would you like to give this server to be displayed in the title and prompt?\n"
   read server_name
   if [[ ! -z "$server_name" ]]; then
-    printf "\nalias set_title='change_title $server_name'\nset_title\n" >> $file_local_env
     echo "$server_name" > ~/.displayname
+    printf "\nalias set_title='change_title $(cat ~/.displayname)'\nset_title\n" >> $file_local_env
   fi
 fi
 
@@ -99,13 +112,11 @@ if [[ ! "$use_git" =~ [nN][oO]? ]]; then
     fi
 fi
 
-# Set up ssh key passphrase
-mkdir -p $dir_ssh
-chmod 700 $dir_ssh
+# Clean up
+unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_git_ssh_keys url_git_completion url_git_profile url_git_menu url_git_ssh_keys editor use_git user_name user_email update_git
 
-unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_key url_git_completion url_git_profile url_git_menu editor use_git user_name user_email update_git prompt char pass
-
+# Load new profile script
 source $file_profile
 unset file_profile
 
-printf "\nDone\n\nYou can safely remove setprofile.sh if you want or use it to pull updates.\n\n"
+printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"
