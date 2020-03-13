@@ -35,7 +35,7 @@ fi
 
 # Add ssh-keys.sh if it doesn't exist
 if [[ ! -f "$file_git_ssh_keys" ]]; then
-  curl "url_git_ssh_keys" -o "$file_git_ssh_keys" 2>/dev/null
+  curl "$url_git_ssh_keys" -o "$file_git_ssh_keys" 2>/dev/null
   printf "ssh_keys_load=()\nssh_keys_pass=()\nsource ~/bin/ssh-keys.sh\n\n" >> $file_local_env
 fi
 
