@@ -34,14 +34,22 @@ if [[ ! -s $file_local_env ]]; then
 fi
 
 # Add ssh-keys.sh if it doesn't exist
-if [[ ! -f "$file_git_ssh_keys" ]]; then
-  curl "$url_git_ssh_keys" -o "$file_git_ssh_keys" 2>/dev/null
-  printf "ssh_keys_load=()\nssh_keys_pass=()\nsource ~/bin/ssh-keys.sh\n\n" >> $file_local_env
+printf "\nDo you want to install/update ssh-keys script to manage your ssh keys? [y/N] "
+read ssh_keys
+if [[ "$ssh_keys" =~ ^[yY][eE]?[sS]?$ ]]; then
+  echo "Proceeding"
+  curl -s "$url_git_ssh_keys" -o "$file_git_ssh_keys"
+  if [[ "$(grep 'ssh_keys_load=' $file_local_env | wc -l)" -eq "1" ]]; then
+    printf "ssh_keys_load=()\nssh_keys_pass=()\nsource $file_git_ssh_keys\n\n" >> $file_local_env
+  fi
+else
+  echo "Skipping"
 fi
 
 # If there is no EDITOR defined prompt for one
 if [[ $(grep "EDITOR=" $file_local_env | wc -l) -eq 0 ]]; then
-  read -p "Which editor do you prefer? [vim], nano, emacs" editor
+  printf "\nWhich editor do you prefer? [vim], nano, emacs "
+  read editor
   test -z $editor && editor=vim
   echo "export EDITOR=$editor" >> $file_local_env
   echo
@@ -49,7 +57,7 @@ fi
 
 # Save the machine's name to .displayname
 if [[ ! -f ~/.displayname ]]; then
-  printf "What name would you like to give this server to be displayed in the title and prompt?\n"
+  printf "\nWhat name would you like to give this server to be displayed in the title and prompt?\n"
   read server_name
   if [[ ! -z "$server_name" ]]; then
     echo "$server_name" > ~/.displayname
@@ -63,17 +71,18 @@ if [[ ! -s ~/.vimrc ]]; then
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
-if [[ $(grep "source $file_profile" $file_startup | wc -l) -eq 0 ]]; then
-  printf "\nsource $file_profile\n\n" >> $file_startup
+if [[ "$(grep "source $file_profile" $file_startup | wc -l)" -eq "0" ]]; then
+  printf "\nsource $file_profile\n" >> $file_startup
 fi
 
 # Configure Git
-read -p "Do want to configure Git? [Y/n] " use_git
+printf "\nDo want to configure Git? [Y/n] "
+read use_git
 if [[ ! "$use_git" =~ ^[nN][oO]?$ ]]; then
-    curl "$url_git_completion" -o $file_git_completion 2>/dev/null
-    curl "$url_git_menu" -o $file_git_menu 2>/dev/null
-    curl "$url_git_profile" -o $file_profile 2>/dev/null
-    curl "$url_git_prompt" -o $file_git_prompt 2>/dev/null
+    curl -s "$url_git_completion" -o $file_git_completion
+    curl -s "$url_git_menu" -o $file_git_menu
+    curl -s "$url_git_profile" -o $file_profile
+    curl -s "$url_git_prompt" -o $file_git_prompt
 
     # Configure git settings
     if [[ -z "$(git config --global user.name)" ]]; then
@@ -113,7 +122,7 @@ if [[ ! "$use_git" =~ ^[nN][oO]?$ ]]; then
 fi
 
 # Clean up
-unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_git_ssh_keys url_git_completion url_git_profile url_git_menu url_git_ssh_keys editor use_git user_name user_email update_git
+unset dir_bin dir_ssh file_startup file_git_menu file_local_env file_git_completion file_git_ssh_keys ssh_keys url_git_completion url_git_profile url_git_menu url_git_ssh_keys editor use_git user_name user_email update_git
 
 # Load new profile script
 source $file_profile

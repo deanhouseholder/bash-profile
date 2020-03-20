@@ -3,6 +3,7 @@
 printf "\nThis script will update the following files:\n\n"
 echo "  .bashrc                 - Remove the line: source ~/bin/profile.sh"
 echo "  .displayname            - To be deleted"
+echo "  .vimrc                  - Remove the 2 added lines"
 echo "  bin/git-completion.bash - To be deleted"
 echo "  bin/git-menu.md         - To be deleted"
 echo "  bin/gitprompt.sh        - To be deleted"
@@ -21,13 +22,16 @@ else
 fi
 
 # Remove/rename/update files
-rm -v ~/.displayname
-rm -v ~/bin/git-completion.bash
-rm -v ~/bin/git-menu.md
-rm -v ~/bin/gitprompt.sh
-rm -v ~/bin/profile.sh
-rm -v ~/bin/ssh-keys.sh
-mv -v ~/bin/local_env.sh ~/bin/local_env.sh.bak
+echo "Removing the two lines added by the setprofile.sh to .vimrc"
+sed -i -e '/^syntax on$/d' -e '/^set nu/d' ~/.vimrc
+rm -vf ~/.displayname
+rm -vf ~/bin/git-completion.bash
+rm -vf ~/bin/git-menu.md
+rm -vf ~/bin/gitprompt.sh
+rm -vf ~/bin/profile.sh
+rm -vf ~/bin/ssh-keys.sh
+mv -vf ~/bin/local_env.sh ~/bin/local_env.sh.bak
+echo "Removing the added line to .bashrc to include bin/profile.sh"
 sed -i '/^source .*\/bin\/profile.sh$/d' ~/.bashrc
 
 printf "\nThe above actions have been taken.\n"
