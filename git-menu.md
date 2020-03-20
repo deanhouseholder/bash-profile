@@ -46,6 +46,7 @@
 | gu            | Look for git updates                                          |
 | gitflow       | Configure or fix Git Flow for the current project             |
 | branch        | Create a new branch or checkout existing branch               |
+| renamebranch  | Rename an existing branch                                     |
 | stash         | Stash current changes                                         |
 | restore       | Restore latest stashed changes                                |
 | wip           | Make a "Work in Progress" commit with a message of "WIP"      |

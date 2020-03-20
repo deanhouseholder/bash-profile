@@ -197,6 +197,7 @@ if [[ $- =~ i ]]; then
   alias gu='git update-git-for-windows'
   alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
   alias branch='f(){ test -z "$1" && echo "No branch name given." && return; git checkout -b $1 2>/dev/null || git checkout $1; git branch -u origin/$1 $1 2>/dev/null; gp; git push --set-upstream origin $1; }; f'
+  alias renamebranch='git branch -m'
   alias stash='git stash'
   alias restore='git stash pop'
   alias wip='git commit -am "WIP"'
