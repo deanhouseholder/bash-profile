@@ -57,9 +57,9 @@ if [[ ! -f ~/.displayname ]]; then
   fi
 fi
 
-# Add a .vimrc file to always turn on syntax highlighting
+# Add a .vimrc file to always turn on syntax highlighting and line numbers
 if [[ ! -s ~/.vimrc ]]; then
-  echo "syntax on" > ~/.vimrc
+  printf "syntax on\nset nu\n" > ~/.vimrc
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
@@ -69,7 +69,7 @@ fi
 
 # Configure Git
 read -p "Do want to configure Git? [Y/n] " use_git
-if [[ ! "$use_git" =~ [nN][oO]? ]]; then
+if [[ ! "$use_git" =~ ^[nN][oO]?$ ]]; then
     curl "$url_git_completion" -o $file_git_completion 2>/dev/null
     curl "$url_git_menu" -o $file_git_menu 2>/dev/null
     curl "$url_git_profile" -o $file_profile 2>/dev/null
