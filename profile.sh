@@ -1,5 +1,5 @@
-## Exports
-if [[ "$(echo $PATH | grep ~/bin | wc -l)" -eq 0 ]]; then
+# Prevent continually adding to the path
+if [[ ! "$PATH" =~ ~/bin:? ]]; then
   export PATH=$PATH:~/bin
 fi
 
@@ -63,6 +63,8 @@ if [[ $- =~ i ]]; then
   alias reboot?='f(){ r=/var/run/reboot-required; rp=$r.pkgs; test -f $r && (echo "Reboot required"; test -f $rp && echo -e "\nPackages updated:\n$(cat $rp)\n") || echo "No need to reboot."; }; f'
   alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"' 2>/dev/null'
   alias bin='cd ~/bin'
+  alias ccat="ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white"
+
 
   # up will cd up a directory or if you pass in a number it will cd up that many times
   function up() {
@@ -88,7 +90,7 @@ if [[ $- =~ i ]]; then
   alias ut='cd /'
 
   ## Apache
-  alias apache='cd /etc/apache2/sites-available/ && ls -lh'
+  alias apache='cd /etc/apache2/sites-available/ && ls *-ssl.conf'
   alias logs='cd /var/log/apache2/ && ls'
   alias rp='chown -R www-data:www-data .'
 
@@ -244,12 +246,12 @@ if [[ $- =~ i ]]; then
     echo
   }
 
-  sphp(){ search '*.php' "$1"; }
-  sphpi(){ search '*.php' "$1" 1; }
-  scss(){ search '*.css' "$1"; }
-  scssi(){ search '*.css' "$1" 1; }
-  sjs(){ search '*.js' "$1"; }
-  sjsi(){ search '*.js' "$1" 1; }
+  sphp(){ search "$1" '*.php'; }
+  sphpi(){ search "$1" '*.php' 1; }
+  scss(){ search "$1" '*.css'; }
+  scssi(){ search "$1" '*.css' 1; }
+  sjs(){ search "$1" '*.js'; }
+  sjsi(){ search "$1" '*.js' 1; }
   searchall(){ search '*' "$1"; }
   searchalli(){ search '*' "$1" 1; }
   searchcount(){ echo; printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; echo; }
@@ -306,6 +308,47 @@ if [[ $- =~ i ]]; then
       for i in $(seq $1); do
         popd &>/dev/null
       done
+    fi
+  }
+
+  # Simple calculator function
+  calc() {
+    awk "BEGIN{print $*}"
+  }
+
+  # Time command/script in hours/mins/secs
+  time_cmd() {
+    local time_start=$(date +%s%N)
+    eval "$@"
+    local time_end=$(date +%s%N)
+    local time_elapsed=$(expr $time_end - $time_start)
+    if [[ ${#time_elapsed} -lt 9 ]]; then
+      local secs=0
+      local nano=$time_elapsed
+    else
+      local secs=${time_elapsed:0:(-9)}
+      local nano=${time_elapsed:(-9)}
+    fi
+    test ${#nano} -lt 9 && nano=$(printf "%09d" $nano)
+    date -d@${secs}.${nano} -u "+Time taken: %Hh %Mm %Ss %Nns"
+  }
+
+  # Intelligent replacement for the cat command
+  cat(){
+    if [[ -z "$1" ]]; then             # No arguments (probably piping in another command)
+      /bin/cat
+    elif [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then  # If passed with -A then use regular cat
+      /bin/cat "$@"
+    elif [[ -d "$1" ]]; then           # Directory
+      ls -l "$1"
+    elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(command -v jq)" ]]; then  # If .json file then send through JQ
+      /bin/cat "$@" | jq
+    elif [[ "$1" =~ ^\>.*$ ]]; then    # If concatenating multiple files use regular cat
+      /bin/cat "$@"
+    elif [[ ccat ]]; then              # If ccat is installed use ccat
+      ccat "$@"
+    else                               # Else use regular cat
+      /bin/cat "$@"
     fi
   }
 

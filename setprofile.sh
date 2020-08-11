@@ -59,7 +59,7 @@ fi
 
 # Add a .vimrc file to always turn on syntax highlighting
 if [[ ! -s ~/.vimrc ]]; then
-  echo "syntax on" > ~/.vimrc
+  printf "syntax on\nset nu\n" > ~/.vimrc
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
