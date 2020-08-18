@@ -252,8 +252,8 @@ if [[ $- =~ i ]]; then
   scssi(){ search "$1" '*.css' 1; }
   sjs(){ search "$1" '*.js'; }
   sjsi(){ search "$1" '*.js' 1; }
-  searchall(){ search '*' "$1"; }
-  searchalli(){ search '*' "$1" 1; }
+  searchall(){ search "$1" '*'; }
+  searchalli(){ search "$1" '*' 1; }
   searchcount(){ echo; printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; echo; }
   searchcounti(){ printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -iRHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; }
 
