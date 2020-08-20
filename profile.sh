@@ -56,6 +56,7 @@ if [[ $- =~ i ]]; then
   alias clear='printf "\033c"'
   alias cls='printf "\033c"'
   alias reload='. ~/bin/profile.sh'
+  alias r='reload'
   alias p='$EDITOR ~/bin/profile.sh'
   alias s='sudo su -'
   alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s\n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n%s\n" "$OUT" | column -t'
@@ -63,8 +64,6 @@ if [[ $- =~ i ]]; then
   alias reboot?='f(){ r=/var/run/reboot-required; rp=$r.pkgs; test -f $r && (echo "Reboot required"; test -f $rp && echo -e "\nPackages updated:\n$(cat $rp)\n") || echo "No need to reboot."; }; f'
   alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"' 2>/dev/null'
   alias bin='cd ~/bin'
-  alias ccat="ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white"
-
 
   # up will cd up a directory or if you pass in a number it will cd up that many times
   function up() {
@@ -210,40 +209,77 @@ if [[ $- =~ i ]]; then
   # $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
   search(){
     # Define Vars
-    local SEP='ᚦ' # Obscure ascii character not likely to appear in files
-    local BOLD='\e[4m\e[1m'
-    local END='\e[m\e[K'
-    local PLAIN='\e[15m\e[K'
-    local HEADING="${BOLD}\e[37m"
-    local HEADER="${END}${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}${PLAIN}$SEP${BOLD}%s${END}\n"
-    local FILTER="s/^([^:]*):([^:]+):\s*(.*)$/\2$SEP\1$SEP\3/g"
-    local SEARCH="$1"
-    local NAME='*'
-    local CASE_SENSITIVE=''
+    local sep=$'\x01' # Obscure ascii character not likely to appear in files
+    local col_spacing=3
+    local bold='\e[1m'
+    local end='\e[0m'
+    local green='\e[32m'
+    local purple='\e[35m'
+    local filter_swap_separators="s/^([^:]*):([^:]+):\s*(.*)$/\2$sep\1$sep\3/g"
+    local filter_out_colors="\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]"
+    local col_line_w=0 # Column containing the line number's max width
+    local col_path_w=0 # Column containing the file path's max width
+    local search name case_sensitive find col_line col_path col_data error message usage
 
-    # Check user input
+    # Check for missing input
     if [[ -z "$1" ]]; then
-      local ERROR="${BOLD}\e[37m\e[41m"
-      local MESSAGE="${BOLD}\e[36m"
-      local USAGE="\n${HEADING}Recursive File Search${END}\n\n"
-      USAGE="${USAGE}${ERROR}Error: %s${END}\n\n${MESSAGE}Usage:\n${END}"
-      USAGE="${USAGE}search \"[search string]\" \"[file pattern]\" [insensitive]\n\n"
-      USAGE="${USAGE}${MESSAGE}Examples:${END}\n"
-      USAGE="${USAGE}search \"undefined\" '*.js' 1\n"
-      USAGE="${USAGE}search 'Fatal Error:' '*.log'\n\n"
-      test -z "$1" && printf "$USAGE" "No search string given" && return 1
+      error="${bold}\e[37m\e[41m"
+      message="${bold}\e[36m"
+      usage="\n${bold}Recursive File Search${end}\n\n"
+      usage="${usage}${error}Error: %s${end}\n\n${message}Usage:\n${end}"
+      usage="${usage}search \"SEARCH_STRING\"                    (Search all files for case-sensitive matching)\n"
+      usage="${usage}search \"SEARCH_STRING\" \"FILE_PATTERN\"     (For case-sensitive matching)\n"
+      usage="${usage}search \"SEARCH_STRING\" \"FILE_PATTERN\" 1   (For case-insensitive matching)\n\n"
+      usage="${usage}${message}Examples:${end}\n"
+      usage="${usage}search \"undefined\" '*.js' 1\n"
+      usage="${usage}search 'Fatal Error:' '*.log'\n\n"
+      printf "$usage" "No search string given"
+      return 1
     fi
-    test -z "$2" || NAME="$2"
-    test "$3" == '1' && CASE_SENSITIVE='i'
 
-    # Perform Search
-    echo
-    ( printf "$HEADER" "Line" "File Path" "Search Results"
-      printf "$HEADER" "----" "---------" "---------------"
-      find . -type f -name "$NAME" -exec grep -${CASE_SENSITIVE}nH --color=always "$SEARCH" {} \; \
-        | grep -v '^Binary' | uniq | sed -r -e "$FILTER"
-    ) | column -t -s "$SEP"
-    echo
+    # Process user input
+    search="$1"
+    test -z "$2" && name='*' || name="$2"
+    test "$3" == '1' && case_sensitive='i'
+
+    # Run find command can capture the results into an array
+    mapfile find < <( \
+      find . -type f -name "$name" -exec grep -${case_sensitive}nH --color=always "$search" {} \; \
+      | grep -v '^Binary' | uniq | sed -r -e "$filter_swap_separators" \
+    )
+
+    # loop through the first time to determine max column widths
+    while read line; do
+      while IFS="$sep" read -r col_line col_path col_data; do
+        # Strip out color characters everywhere
+        col_line_plain="$(echo "$col_line" | sed -r "s/$filter_out_colors//g")"
+        col_path_plain="$(echo "$col_path" | sed -r "s/$filter_out_colors//g")"
+        if [[ $col_line_w -lt ${#col_line_plain} ]]; then col_line_w=${#col_line_plain}; fi
+        if [[ $col_path_w -lt ${#col_path_plain} ]]; then col_path_w=${#col_path_plain}; fi
+      done < <(echo "${line[@]}")
+    done < <(echo "${find[@]}")
+
+    # Add some padding
+    let col_line_w+=$col_spacing
+    if [[ $col_line_w -lt $((4 + $col_spacing)) ]]; then
+      col_line_w=$((4 + $col_spacing)) # Because the heading "Line" is 4 chars, make it at least that long
+    fi
+    let col_path_w+=$col_spacing
+
+    # Print heading
+    printf "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "Line" "File Path" "Search Results"
+    printf "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "----" "---------" "---------------"
+
+    # Loop through again to display output in columns
+    while read line; do
+      while IFS="$sep" read -r col_line col_path col_data; do
+        col_line=$(echo $col_line | sed -r "s/$filter_out_colors//g")     # Strip out color codes everywhere
+        col_path=$(echo $col_path | sed -r "s/$filter_out_colors//g")     # Strip out color codes everywhere
+        col_data=$(echo $col_data | sed -r "s/^($filter_out_colors)*//g") # Trim leading color codes only
+        col_data=$(echo $col_data)                                        # Trim spaces
+        printf "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "$col_data"
+      done < <(echo "${line[@]}")
+    done < <(echo "${find[@]}")
   }
 
   sphp(){ search "$1" '*.php'; }
@@ -335,18 +371,18 @@ if [[ $- =~ i ]]; then
 
   # Intelligent replacement for the cat command
   cat(){
-    if [[ -z "$1" ]]; then             # No arguments (probably piping in another command)
-      /bin/cat
-    elif [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then  # If passed with -A then use regular cat
+    if [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then  # If passed with -A then use regular cat
       /bin/cat "$@"
     elif [[ -d "$1" ]]; then           # Directory
       ls -l "$1"
-    elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(command -v jq)" ]]; then  # If .json file then send through JQ
+    elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(which jq)" ]]; then  # If .json file then send through JQ
       /bin/cat "$@" | jq
+    elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ ! -z "$(which glow)" ]]; then  # If .json file then send through JQ
+      glow "$@"
     elif [[ "$1" =~ ^\>.*$ ]]; then    # If concatenating multiple files use regular cat
       /bin/cat "$@"
-    elif [[ ccat ]]; then              # If ccat is installed use ccat
-      ccat "$@"
+    elif [[ ! -z "$1" ]] && [[ ! -z "$(which ccat)" ]]; then  # If ccat is installed use ccat
+      ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white "$@"
     else                               # Else use regular cat
       /bin/cat "$@"
     fi
@@ -501,67 +537,8 @@ if [[ $- =~ i ]]; then
     cd - >/dev/null
   }
 
-  ## Bash Prompt Start
-
-  alias r='reload'
-
-  # Function to shorten the directory
-  function shorten_pwd {
-    test ${#PWD} -gt 40 && pwd | awk -F/ '{print "/"$2"/["(NF-4)"]/"$(NF-1)"/"$NF}' || pwd
-  }
-
-  # Print a foreground color that is properly-escaped for PS1 prompts
-  fg() {
-    printf "\[\e[38;5;$1m\]"
-  }
-
-  # Print a background color that is properly-escaped for PS1 prompts
-  bg() {
-    printf "\[\e[48;5;$1m\]"
-  }
-
-  # Reset the colors to default in the PS1 prompt
-  norm() {
-    printf "\[\e[0m\]"
-  }
-
   # Include the Git Prompt functions
-  . ~/bin/gitprompt.sh
-
-  function show_prompt {
-    ## Define Colors
-    local fgr="$(fg 253)"                       # FG: White
-    local root_bg="$(bg 130)"                   # BG: Orange
-    local user_bg="$(bg 24)"                    # BG: Blue
-    local dir_bg="$(bg 236)"                    # BG: Dark Gray
-    local host_bg="$(bg 30)"                    # BG: Blue-Green
-    local N="$(norm)"                           # Reset styles
-
-    ## Define other vars
-    local host=""
-    test -f ~/.displayname && host="$(cat ~/.displayname)"
-
-    ## Determine if user is root or not
-    test $UID -eq 0 && bg_color='root_bg' || bg_color='user_bg'
-
-    test -z "$USER" && export USER=$(whoami)
-    export prefix="$fgr${!bg_color} $USER $fgr"
-    if [[ "$host" != "" ]]; then
-      prefix+="$host_bg $host $fgr"
-    fi
-    prefix+="$dir_bg "
-    export suffix="> $N"
-    export PS1="$prefix\$(shorten_pwd) $(git_prompt)$suffix"
-  }
-
-  # Run this function every time the prompt is displayed to update the variables
-  PROMPT_COMMAND="show_prompt"
-
-  # Run the function once to pre-load variables
-  show_prompt
-
-  ## Bash Prompt End
-
+  . ~/bin/prompt.sh
 
   ## Include local_env.sh
   test ! -f ~/bin/local_env.sh && touch ~/bin/local_env.sh

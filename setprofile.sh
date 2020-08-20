@@ -12,11 +12,13 @@ file_git_menu=$dir_bin/git-menu.md
 file_local_env=$dir_bin/local_env.sh
 file_git_completion=$dir_bin/git-completion.bash
 file_git_prompt=$dir_bin/gitprompt.sh
+file_git_prompt_example=$dir_bin/prompt.sh
 file_git_ssh_keys=$dir_bin/ssh-keys.sh
 url_git_completion="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
 url_git_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_menu="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/git-menu.md"
 url_git_prompt="https://raw.githubusercontent.com/deanhouseholder/gitprompt/master/gitprompt.sh"
+url_git_prompt_example="https://raw.githubusercontent.com/deanhouseholder/gitprompt/master/example_prompt.sh"
 url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
 
 # Start install script
@@ -79,10 +81,11 @@ fi
 printf "\nDo want to configure Git? [Y/n] "
 read use_git
 if [[ ! "$use_git" =~ ^[nN][oO]?$ ]]; then
-    curl -s "$url_git_completion" -o $file_git_completion
-    curl -s "$url_git_menu" -o $file_git_menu
-    curl -s "$url_git_profile" -o $file_profile
-    curl -s "$url_git_prompt" -o $file_git_prompt
+    curl -s "$url_git_completion" -o "$file_git_completion"
+    curl -s "$url_git_menu" -o "$file_git_menu"
+    curl -s "$url_git_profile" -o "$file_profile"
+    curl -s "$url_git_prompt" -o "$file_git_prompt"
+    curl -s "$url_git_prompt_example" -o "$file_git_prompt_example"
 
     # Configure git settings
     if [[ -z "$(git config --global user.name)" ]]; then
