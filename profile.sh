@@ -151,58 +151,6 @@ if [[ $- =~ i ]]; then
   alias ddown='dc stop'
   alias dssh='doc run -it app1 /bin/bash'
 
-  ## Git
-  alias g='git'
-  alias gm='display_alias_menu "git-menu.md" "Git Shortcuts Menu"'
-  alias gmenu='gm'
-  alias gh='git help'
-  alias gha='git help -a'
-  alias g.='git add . && gs'
-  alias ga='git add'
-  alias gac='git add . && git commit && git push'
-  alias gad='git status -s | awk '"'"'{print $2}'"'"''
-  alias gb='git branch -a'
-  alias gback='git checkout -'
-  alias gc='git commit'
-  alias gca='git commit -a --amend -C HEAD'
-  alias gcm='git checkout master'
-  alias gcd='git checkout develop'
-  alias gcb='f(){ git checkout bugfix/$1 2>/dev/null; git branch -u origin/bugfix/$1 bugfix/$1 >/dev/null; }; f'
-  alias gcf='f(){ git checkout feature/$1 2>/dev/null; git branch -u origin/feature/$1 feature/$1 >/dev/null; }; f'
-  alias gch='f(){ git checkout hotfix/$1 2>/dev/null; git branch -u origin/hotfix/$1 hotfix/$1 >/dev/null; }; f'
-  alias gcr='f(){ git checkout release/$1 2>/dev/null; git branch -u origin/release/$1 release/$1 >/dev/null; }; f'
-  alias gcs='f(){ git checkout support/$1 2>/dev/null; git branch -u origin/support/$1 support/$1 >/dev/null; }; f'
-  alias gd='git diff'
-  # add an alias to diff a file between revisions:
-  # git diff HEAD~4 HEAD~3 app/Jobs/ImportContacts.php
-  alias gf='git fetch'
-  alias ghash='git branch --contains'
-  alias gitcred='git config --global credential.helper "store --file ~/.git-credentials"'
-  alias gl='git log --graph --decorate'
-  alias glg='git log --oneline --graph --decorate'
-  alias gla='git log --oneline --all --source --decorate=short'
-  alias gld='git show'
-  alias glf='git log --name-only'
-  alias glast='git show --stat=$(tput cols) --compact-summary'
-  alias gp='git pull'
-  alias gps='git push'
-  alias gr='git checkout -- .'
-  alias grm='gad | xargs rm -r 2>/dev/null'
-  alias greset='gr && grm'
-  alias grh='git reset --hard'
-  alias gum='git stash; git checkout master; git pull; git checkout -; git stash pop'
-  alias gs='clear && git status --ignore-submodules 2>/dev/null'
-  alias gsa='clear && git status 2>/dev/null'
-  alias gss='git submodule status 2>/dev/null'
-  alias gsu='git submodule update'
-  alias gu='git update-git-for-windows'
-  alias cleanup='d=($(git branch --merged | grep -Ev develop\|master | sed -e "s/^\*//" -e "s/^ *//g" | uniq)); if [[ ${#d[@]} -gt 0 ]]; then echo ${d[@]} | xargs git branch -d; fi'
-  alias branch='f(){ test -z "$1" && echo "No branch name given." && return; git checkout -b $1 2>/dev/null || git checkout $1; git branch -u origin/$1 $1 2>/dev/null; gp; git push --set-upstream origin $1; }; f'
-  alias renamebranch='git branch -m'
-  alias stash='git stash'
-  alias restore='git stash pop'
-  alias wip='git commit -am "WIP"'
-
   # Recursive File Search function
   # $1 = Search string
   # $2 = (optional) File pattern (ex: *.js) (default is: *)
@@ -403,29 +351,6 @@ if [[ $- =~ i ]]; then
   # Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
   mp3_64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
 
-  # Set up or Fix a git flow directory
-  gitflow() {
-      GIT_FLOW_CONFIG="master\ndevelop\nfeature/\nbugfix/\nrelease/\nhotfix/\nsupport/\n\n\n"
-      # Check to see if git flow is initialized and is correctly configured
-      echo "Checking git flow config..."
-      GIT_FLOW_CHECK=$(git flow config 2>/dev/null)
-      if [[ $? -eq 1 ]]; then
-        # Check if Git Flow is installed
-        GIT_CHECK=$(git flow 2>&1 | grep 'not a git command' | wc -l)
-        if [[ $GIT_CHECK -eq 1 ]]; then
-          printf "\nError: Git Flow is not installed.\n\nPlease run: \"apt install git-flow\"\n\n"
-          return 1
-        fi
-        # Set Git Flow config
-        echo "Configuring git flow"
-        printf "$GIT_FLOW_CONFIG" | git flow init >/dev/null
-      elif [[ $(echo "$GIT_FLOW_CHECK" | grep "Feature branch prefix: feature/" | wc -l) -eq 0 ]]; then
-        # Force reset of Git Flow config
-        echo "Reconfiguring git flow"
-        printf "$GIT_FLOW_CONFIG" | git flow init -f >/dev/null
-      fi
-  }
-
 
   ## Display Alias Menu
   display_alias_menu() {
@@ -536,9 +461,6 @@ if [[ $- =~ i ]]; then
     du -sk * 2>/dev/null | sort -n | awk 'BEGIN{ pref[1]="K"; pref[2]="M"; pref[3]="G";} { total = total + $1; x = $1; y = 1; while( x > 1024 ) { x = (x + 1023)/1024; y++; } printf("%g%s\t%s\n",int(x*10)/10,pref[y],$2); } END { y = 1; while( total > 1024 ) { total = (total + 1023)/1024; y++; } printf("Total: %g%s\n",int(total*10)/10,pref[y]); }'
     cd - >/dev/null
   }
-
-  # Include the Git Prompt functions
-  . ~/bin/prompt.sh
 
   ## Include local_env.sh
   test ! -f ~/bin/local_env.sh && touch ~/bin/local_env.sh
