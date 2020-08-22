@@ -12,13 +12,14 @@ file_startup=~/.bashrc
 file_profile="$dir_bin/profile.sh"
 file_local_env="$dir_bin/local_env.sh"
 file_git_ssh_keys="$dir_bin/ssh-keys.sh"
-file_gitprompt_startup="$dir_gitprompt/default-prompt.sh"
+file_gitprompt="$dir_gitprompt/default-prompt.sh"
+file_displayname=~/.displayname
 url_bash_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
-repo_gitprompt="git@github.com:deanhouseholder/gitprompt.git"
+repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
 
 # Start install script
-printf "\nStarting configuration of bash profile\n\n"
+printf "\nStarting configuration of bash profile\n"
 
 # Set up directories
 mkdir -p $dir_bin
@@ -28,41 +29,68 @@ chmod 700 $dir_ssh
 mkdir -p $dir_code
 chmod 700 $dir_code
 
+# Prompt for Y or N
+# $1 = [optional] prompt to display
+# $2 = [optional] default value if user presses Enter (Either "Y" or "N")
+# $3 = [optional] variable name to capture (default is $yn)
+# Set variable ($yn or $2) is always uppercase "Y" or "N"
+prompt_yn() {
+  local prompt default out_varname passed   # Define local vars
+  [[ -z "$1" ]] || printf "$1"              # If prompt is set, display it
+  [[ "$2" =~ ^[YyNn]$ ]] && default=${2^^}  # Set default if valid $2 is passed in
+  [[ "$3" =~ ^[a-zA-Z0-9_]+$ ]] && out_varname=$3  # Ensure custom var name is safe to use
+
+  # Infinate loop to read in one character. Break if any of: y, Y, n, N
+  while true; do
+    # Prompt for one character. Disable IFS to disambiguate between Space, Enter, ESC
+    IFS= read -rsn 1 prompt
+
+    # Check if Y or N was pressed
+    if [[ "$prompt" =~ [yYnN] ]]; then
+      prompt=${prompt^^}                    # Convert to uppercase
+      passed=1
+    fi
+
+    # Check if Enter was pressed -- check for default $2 passed in
+    if [[ -z "$prompt" ]] && [[ ! -z "$default" ]]; then
+      prompt=$default
+      passed=1
+    fi
+
+    # Valid input was entered, now assign it
+    if [[ $passed -eq 1 ]]; then
+      if [[ ! -z "$out_varname" ]]; then    # If user passed in a custom var name
+        eval "$out_varname=$prompt"         # Set custom var name to the prompt value
+      else
+        yn=$prompt                          # Set a public variable to the value
+      fi
+      echo $prompt
+      break                                 # Break out of the loop
+    fi
+  done
+}
+
 # If the local_env.sh doesn't exist or is 0 bytes
 if [[ ! -s $file_local_env ]]; then
   printf "# Add any custom bash profile tweaks specific to this environment in this file\n\n" > $file_local_env
 fi
 
 # Add ssh-keys.sh if it doesn't exist
-printf "\nDo you want to install/update ssh-keys script to manage your ssh keys? [y/N] "
-read -n 1 ssh_keys
-if [[ "$ssh_keys" =~ [yY] ]]; then
-  echo "Proceeding"
+prompt_yn "\nDo you want to install/update ssh-keys script to manage your ssh keys? [y/N] " N
+if [[ $yn == "Y" ]]; then
   curl -s "$url_git_ssh_keys" -o "$file_git_ssh_keys"
   if [[ -z "$(grep 'ssh_keys_load=' $file_local_env)" ]]; then
     printf "ssh_keys_load=()\nssh_keys_pass=()\nsource $file_git_ssh_keys\n\n" >> $file_local_env
   fi
-else
-  echo "Skipping"
 fi
 
 # If there is no EDITOR defined prompt for one
 if [[ -z $(grep "EDITOR=" $file_local_env) ]]; then
-  printf "\nWhich editor do you prefer? [vim], nano, emacs "
+  printf "\nWhich editor do you prefer? [vim], nano, emacs: "
   read editor
   test -z $editor && editor=vim
   echo "export EDITOR=$editor" >> $file_local_env
   echo
-fi
-
-# Save the machine's name to .displayname
-if [[ ! -f ~/.displayname ]]; then
-  printf "\nWhat name would you like to give this server to be displayed in the title and prompt?\n"
-  read server_name
-  if [[ ! -z "$server_name" ]]; then
-    echo "$server_name" > ~/.displayname
-    printf "\nalias set_title='change_title $(cat ~/.displayname)'\nset_title\n" >> $file_local_env
-  fi
 fi
 
 # Add a .vimrc file to always turn on syntax highlighting and line numbers
@@ -71,9 +99,12 @@ if [[ ! -s ~/.vimrc ]]; then
 fi
 
 # Download and auto-load bash-profile
-printf "\nDo you want to overwrite your profile.sh? [Y/n] "
-read -n 1 ssh_keys
-if [[ ! "$ssh_keys" =~ [Nn] ]]; then
+# If file already exists, prompt to overwrite
+if [[ -f "$file_profile" ]]; then
+  prompt_yn "\nDo you want to overwrite your profile.sh with the latest version? [Y/n] " Y
+fi
+# If ok to overwrite or file is not there, download it
+if [[ $yn == "Y" ]] || [[ ! -f "$file_profile" ]]; then
   curl -s "$url_bash_profile" -o "$file_profile"
 fi
 
@@ -83,31 +114,15 @@ if [[ -z "$(grep "source $file_profile" $file_startup)" ]]; then
 fi
 
 # Configure Git
-printf "\nDo want to configure Git? [Y/n] "
-read -n 1 use_git
+prompt_yn "Do want to configure Git? [Y/n] " "Y"
+echo
 
 # User confirmed they want to configure Git
-if [[ ! "$use_git" =~ [nN] ]]; then
+if [[ $yn == "Y" ]]; then
 
   if [[ -z "$(which git)" ]]; then
     printf "Git is not installed! Please install then re-run $0\n\n"
     return
-  fi
-
-  # Clone or update the gitprompt repo
-  if [[ ! -d $dir_gitprompt ]]; then
-    printf "Setting up gitprompt...\n"
-    git clone $repo_gitprompt $dir_gitprompt
-  else
-    printf "Updating the gitprompt repo...\n"
-    cd $dir_gitprompt
-    git pull
-    cd -
-  fi
-
-  # Add auto loading of gitprompt in .bashrc if it isn't there
-  if [[ -z "$(grep "source file_gitprompt_startup" $file_startup)" ]]; then
-    printf "\n# Include the Git Prompt functions\nsource file_gitprompt_startup\n" >> $file_startup
   fi
 
   # Configure git settings
@@ -119,8 +134,8 @@ if [[ ! "$use_git" =~ [nN] ]]; then
     read -p "What email address would you like to use for git commits? " user_email
     git config --global user.email "$user_email"
   fi
-  read -p "Would you like to update your Git colors/options configuration? [Y/n] " update_git
-  if [[ ! "$update_git" =~ [nN][oO]? ]]; then
+  prompt_yn "Would you like to update your Git colors/options configuration? [Y/n] " Y
+  if [[ "$yn" == "Y" ]]; then
       git config --global core.whitespace "fix,-indent-with-non-tab,trailing-space,cr-at-eol"
       git config --global format.pretty "%C(178)%h%Creset %C(110)%cd%Creset %C(85)%d %C(15)%s"
       git config --global color.branch "auto"
@@ -145,13 +160,47 @@ if [[ ! "$use_git" =~ [nN] ]]; then
       git config --global color.decorate.HEAD "50"
       git config --global push.default "simple"
   fi
+
+  # Clone or update the gitprompt repo
+  prompt_yn "Do want to install/update gitprompt? [Y/n] " "Y"
+  if [[ $yn == "Y" ]]; then
+
+    # Clone/Update gitprompt
+    if [[ ! -d $dir_gitprompt ]]; then
+      printf "\nSetting up gitprompt...\n\n"
+      git clone $repo_gitprompt $dir_gitprompt
+    else
+      printf "\nUpdating the gitprompt repo...\n\n"
+      cd $dir_gitprompt
+      git pull
+      cd -
+    fi
+    echo
+
+    # Add auto loading of gitprompt in .bashrc if it isn't there
+    if [[ -z "$(grep "source $file_gitprompt" $file_startup)" ]]; then
+      printf "\n# Include the Git Prompt functions\nsource $file_gitprompt\n\n" >> $file_startup
+    fi
+
+    # Save the machine's name to .displayname
+    if [[ ! -f $file_displayname ]]; then
+      printf "\nWhat display name would you use for this server (used in the title and prompt)?\n"
+      read server_name
+      if [[ ! -z "$server_name" ]]; then
+        echo "$server_name" > $file_displayname
+        printf "\nalias set_title='change_title $(cat ~/.displayname)'\nset_title\n" >> $file_local_env
+      else
+        hostname > $file_displayname
+      fi
+    fi
+  fi
 fi
 
-# Clean up
-unset dir_bin dir_ssh file_startup file_local_env file_git_ssh_keys ssh_keys url_git_profile url_git_menu url_git_ssh_keys editor use_git user_name user_email update_git
-
 # Load new profile script
-source $file_profile
-unset file_profile
+source "$file_profile"
+source "$file_gitprompt"
+
+# Clean up
+unset dir_bin dir_code dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_gitprompt server_name url_bash_profile url_git_ssh_keys user_email user_name yn
 
 printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"
