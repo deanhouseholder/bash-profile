@@ -120,7 +120,7 @@ echo
 # User confirmed they want to configure Git
 if [[ $yn == "Y" ]]; then
 
-  if [[ -z "$(which git)" ]]; then
+  if [[ -z "$(which git 2>&1 | grep -v 'no git')" ]]; then
     printf "Git is not installed! Please install then re-run $0\n\n"
     return
   fi
