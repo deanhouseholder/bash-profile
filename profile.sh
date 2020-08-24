@@ -323,13 +323,13 @@ if [[ $- =~ i ]]; then
       /bin/cat "$@"
     elif [[ -d "$1" ]]; then           # Directory
       ls -l "$1"
-    elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(which jq)" ]]; then  # If .json file then send through JQ
+    elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(which jq 2>&1 | grep -v 'no jq')" ]]; then  # If .json file then send through JQ
       /bin/cat "$@" | jq
-    elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ ! -z "$(which glow)" ]]; then  # If .json file then send through JQ
+    elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ ! -z "$(which glow 2>&1 | grep -v 'no glow')" ]]; then  # If .json file then send through JQ
       glow "$@"
     elif [[ "$1" =~ ^\>.*$ ]]; then    # If concatenating multiple files use regular cat
       /bin/cat "$@"
-    elif [[ ! -z "$1" ]] && [[ ! -z "$(which ccat)" ]]; then  # If ccat is installed use ccat
+    elif [[ ! -z "$1" ]] && [[ ! -z "$(which ccat 2>&1 | grep -v 'no ccat')" ]]; then  # If ccat is installed use ccat
       ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white "$@"
     else                               # Else use regular cat
       /bin/cat "$@"
@@ -422,17 +422,17 @@ if [[ $- =~ i ]]; then
     printf "\e[32mExtracting $filename\e[0m\n"
 
     # Check if extraction command is installed/executable
-    [[ ! -x "$(which $cmd)" ]] && printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
+    [[ ! -x "$(which $cmd 2>&1 | grep -v 'no ')" ]] && printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
 
     # Check if pv is enabled and installed
-    if [[ $usepv -eq 1 && -x "$(which pv)" ]]; then
+    if [[ $usepv -eq 1 && -x "$(which pv 2>&1 | grep -v 'no pv')" ]]; then
       filesize=$(stat -c '%s' "$1")
       newfile="${1%%$ext}"
 
       # Handle special case for .zip since unzip command doesn't allow piping and funzip doesn't allow multiple files
       if [[ $ext == ".zip" ]]; then
         # If the .zip contains 1 file and if funzip and pv are installed we can show a progress bar
-        if [[ $(zipinfo -t "$1" | awk '{print $1}') -eq 1 && -x "$(which funzip)" ]]; then
+        if [[ $(zipinfo -t "$1" | awk '{print $1}') -eq 1 && -x "$(which funzip 2>&1 | grep -v 'no funzip')" ]]; then
           cat "$1" | pv -s $filesize -i 0.1 -D 0 | funzip > "$newfile"
         else
           unzip "$1"
