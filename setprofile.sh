@@ -8,7 +8,7 @@ dir_bin=~/bin
 dir_ssh=~/.ssh
 dir_code=~/code
 dir_gitprompt="$dir_code/gitprompt"
-file_startup=~/.bashrc
+file_startup=~/.bash_profile
 file_profile="$dir_bin/profile.sh"
 file_local_env="$dir_bin/local_env.sh"
 file_git_ssh_keys="$dir_bin/ssh-keys.sh"
@@ -95,7 +95,7 @@ fi
 
 # Add a .vimrc file to always turn on syntax highlighting and line numbers
 if [[ ! -s ~/.vimrc ]]; then
-  printf "syntax on\nset nu\n" > ~/.vimrc
+  printf "syntax on\nset nu\nset tabstop=4\n" > ~/.vimrc
 fi
 
 # Download and auto-load bash-profile

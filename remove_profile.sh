@@ -1,9 +1,9 @@
 #!/bin/bash
 
 printf "\nThis script will update the following files:\n\n"
-echo "  .bashrc                 - Remove the line: source ~/bin/profile.sh"
-echo "  .bashrc                 - Remove the line: # Include the Git Prompt functions"
-echo "  .bashrc                 - Remove the line: source ~/code/gitprompt/default-prompt.sh"
+echo "  .bash_profile           - Remove the line: source ~/bin/profile.sh"
+echo "  .bash_profile           - Remove the line: # Include the Git Prompt functions"
+echo "  .bash_profile           - Remove the line: source ~/code/gitprompt/default-prompt.sh"
 echo "  .displayname            - To be deleted"
 echo "  .vimrc                  - Remove the 2 added lines"
 echo "  bin/profile.sh          - To be deleted"
@@ -29,10 +29,10 @@ rm -vf ~/bin/profile.sh
 rm -vf ~/bin/ssh-keys.sh
 echo "Renaming ~/bin/local_env.sh to ~/bin/local_env.sh.bak"
 mv -vf ~/bin/local_env.sh ~/bin/local_env.sh.bak
-echo "Removing the added line to .bashrc to include bin/profile.sh"
-sed -i '/^source .*\/bin\/profile.sh$/d' ~/.bashrc
-echo "Removing the added lines to .bashrc to include gitprompt"
-sed -i -e '/^# Include the Git Prompt functions$/d' -e '/^source .*\/gitprompt\/default-prompt.sh$/d' ~/.bashrc
+echo "Removing the added line to .bash_profile to include bin/profile.sh"
+sed -i '/^source .*\/bin\/profile.sh$/d' ~/.bash_profile
+echo "Removing the added lines to .bash_profile to include gitprompt"
+sed -i -e '/^# Include the Git Prompt functions$/d' -e '/^source .*\/gitprompt\/default-prompt.sh$/d' ~/.bash_profile
 if [[ -d ~/code/gitprompt ]]; then
   echo "Removing the gitprompt directory"
   rm -rf ~/code/gitprompt
