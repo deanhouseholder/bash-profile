@@ -138,20 +138,95 @@ if [[ $- =~ i ]]; then
   fi
 
   ## Docker
-  which winpty &>/dev/null
-  [[ $? == 0 ]] && WINPTY='winpty ' || WINPTY=''
-  alias docker='docker.exe'
-  alias doc="${WINPTY}docker"
-  alias dc='docker-compose.exe'
+  which winpty &>/dev/null && WINPTY='winpty ' || WINPTY=''
+  alias docker='${WINPTY}docker.exe'
+  alias doc="docker"
+  alias docker-compose='docker-compose.exe'
+  alias dc='docker-compose'
   alias dm='docker-machine.exe'
   alias dmnative='echo "Switching native docker"; eval $(dm env -u)'
-  alias dssh='f(){ doc exec -it -u root $1 bash; }; f'
-  alias dps='doc ps -a'
-  alias dup='dc up -d'
-  alias ddown='dc stop'
-  alias dssh='doc run -it app1 /bin/bash'
+  alias dssh='f(){ docker exec -it -u root $1 bash; }; f'
+  alias dps='docker ps -a'
+  alias dcps='docker-compose ps'
+  alias dup='docker-compose up -d'
+  alias ddown='docker-compose stop'
+  alias drm='docker_remove_containers'
+  alias drmi='docker_remove_images'
+  alias dready='docker_ready'
+  alias dsh='docker_shell'
+  alias dbt='docker_build_and_maybe_tag'
 
-  # Recursive File Search function
+
+  ## Useful Functions
+
+  # Wait for docker engine to start
+  function docker_ready() {
+    local i=1
+    docker info &>/dev/null
+    while [[ $? -ne 0 ]]; do
+      printf "\rWaiting for docker engine to start up... [$i]"
+      sleep 1
+      let i++
+      docker info &>/dev/null
+    done
+    test $i -gt 1 && printf "\n\nDocker is now ready\n\n"
+  }
+
+  # Stop and delete all Docker containers
+  function docker_remove_containers() {
+    docker_ready
+    local containers=($(docker ps -aq))  # Get a list of the running docker containers
+    test -z $containers && printf "\nNo containers found.\n\n" && return 1
+    printf "\nStopping ${#containers[@]} docker containers:\n"
+    docker stop ${containers[@]}   # Stop all running containers
+    printf "\nDestroying ${#containers[@]} docker containers:\n"
+    docker rm ${containers[@]}     # Destroy all containers
+    echo
+  }
+
+  # Delete all downloaded Docker images. Note: This is not necessary except to clear space
+  function docker_remove_images() {
+    docker_ready
+    local images=($(docker images -aq)) # Get list of images
+    test -z $images && echo "No images found." && return 1
+    printf "\nDestroying docker images:\n"
+    docker rmi ${images[@]} # Remove images
+    echo
+  }
+
+  # Run a shell in the specified Docker container (try bash first)
+  docker_shell() {
+    docker_ready
+    if [[ $# -ne 1 ]]; then
+      echo "Usage: $FUNCNAME [CONTAINER_ID/CONTAINER_NAME]" && return 1
+    fi
+    local containers=($(docker ps -aq))  # Get a list of the running docker containers
+    test -z $containers && printf "\nNo running containers found.\n\n" && return 1
+    if [[ "${containers[@]}" =~ $1 ]]; then
+      # It's a container ID
+      docker exec -it $1 bash 2>/dev/null || docker exec -it $1 sh
+    else
+      # It's a container name
+      docker-compose exec $1 bash 2>/dev/null || docker-compose exec $1 sh
+    fi
+  }
+
+  # Docker build with optional tagging
+  docker_build_and_maybe_tag() {
+    if [[ $# -lt 1 ]]; then
+      echo "Usage $FUNCNAME DIRNAME [TAGNAME ...]" && return 1
+    fi
+    local args="$1"
+    shift
+    if [ $# -ge 2 ]; then
+      args="$args -t $@"
+    fi
+    docker build $args
+  }
+
+
+
+  # Recursive File Contents Search function
   # $1 = Search string
   # $2 = (optional) File pattern (ex: *.js) (default is: *)
   # $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
@@ -240,9 +315,6 @@ if [[ $- =~ i ]]; then
   searchalli(){ search "$1" '*' 1; }
   searchcount(){ echo; printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; echo; }
   searchcounti(){ printf "\nMatches\tFilename\n-----\t--------------------------------\n$(\grep -iRHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)\n\n" | column -t; }
-
-
-  ## Useful Functions
 
   # Replace cd functionality to use pushd instead. If file is given, open in default editor.
   #
