@@ -3,32 +3,39 @@ if [[ ! "$PATH" =~ ~/bin:? ]]; then
   export PATH=$PATH:~/bin
 fi
 
-## Check for interactive terminal
+## Check for interactive terminal, otherwise, don't load all these aliases and functions
 if [[ $- =~ i ]]; then
 
-  ## Turn off CTRL+S mode (only if in interactive mode)
+  ## Turn off CTRL+S mode
   stty -ixon
 
   export TERM='xterm-256color'
   export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
-  export PROFILE_SH_PATH="$BASH_SOURCE"
-  export PROFILE_SH_DIR="${PROFILE_SH_PATH%profile.sh}"
+  profile_sh_path="$BASH_SOURCE"
+  profile_sh_dir="${profile_sh_path%/profile.sh}"
 
   ## Detect Environment and set vars
-  OSVER="$(cat /proc/version 2>/dev/null)"
-
+  os_ver="$(cat /proc/version 2>/dev/null)"
   # Cygwin
-  if [[ "$OSVER" =~ CYGWIN ]]; then
+  if [[ "$os_ver" =~ CYGWIN ]]; then
     export bash_env='cygwin'
     export dir_prefix='/cygdrive/c/'
+    export bash_on_windows=1
+  # WSL on Windows
+  elif [[ "$os_ver" =~ WSL ]]; then
+    export bash_env='wsl'
+    export dir_prefix='/'
+    export bash_on_windows=1
   # Git for Windows
-  elif [[ "$OSVER" =~ MINGW ]]; then
+  elif [[ "$os_ver" =~ MINGW ]]; then
     export bash_env='gitforwin'
     export dir_prefix='/mnt/c/'
+    export bash_on_windows=1
   # Git Bash
-  elif [[ "$OSVER" =~ Microsoft ]]; then
+  elif [[ "$os_ver" =~ Microsoft ]]; then
     export bash_env='git'
     export dir_prefix='/c/'
+    export bash_on_windows=1
   # Mac OSX
   elif [[ $(uname) == "Darwin" ]]; then
     export bash_env='mac'
@@ -44,7 +51,8 @@ if [[ $- =~ i ]]; then
   fi
 
   ## Aliases
-  alias vi='vim "+syntax on"'
+  alias clear='printf "\033c"'
+  alias cls='printf "\033c"'
   alias l='vi ~/bin/local_env.sh'
   alias ls='\ls $LS_OPTIONS'
   alias d='ls'
@@ -52,48 +60,21 @@ if [[ $- =~ i ]]; then
   alias la='ls -lah'
   alias ll='ls -lh'
   alias v='ls -l'
+  alias vim='vim "+syntax on"'
+  alias vi='vim'
   alias vless='$(find /usr/share/vim/ -name less.sh 2>/dev/null)'
-  alias clear='printf "\033c"'
-  alias cls='printf "\033c"'
-  alias reload='. ~/bin/profile.sh'
+  alias reload='. $profile_sh_path'
   alias r='reload'
-  alias p='$EDITOR ~/bin/profile.sh'
+  alias p='$EDITOR $profile_sh_path'
   alias s='sudo su -'
   alias ds='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s\n\", \$7, \$6, \$5}" | sort); printf "Location Used Free\n%s\n" "$OUT" | column -t'
   alias dsf='OUT=$(df -PTh | grep -v "Use" | awk "{printf \"%-9s %4s %4s %-6s\n\", \$7, \$6, \$5, \$2}" | sort); printf "Location Used Free Format \n%s\n" "$OUT" | column -t'
-  alias reboot?='reb(){ r=/var/run/reboot-required; rp=$r.pkgs; test -f $r && (echo "Reboot required"; test -f $rp && echo -e "\nPackages updated:\n$(cat $rp)\n") || echo "No need to reboot."; }; reb'
+  alias reboot?='reb(){ local r=/var/run/reboot-required; local rp=$r.pkgs; test -f $r && (echo "Reboot required"; test -f $rp && echo -e "\nPackages updated:\n$(cat $rp)\n") || echo "No need to reboot."; }; reb'
   alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"' 2>/dev/null'
-  alias bin='cd ~/bin'
-
-  ## Diff Aliases
   alias vimdiff='vimdiff -c "set diffopt=filler,context:0,iwhite"'
   alias colordiff='colordiff -w'
   alias sdiff='sdiff -bBWs'
   alias diffy='test $COLUMNS -ge 155 && COLS=154 || COLS=$COLUMNS; diff -yw --suppress-common-lines -W $COLS'
-
-  ## Changing Directories up
-  ## "up" will cd up a directory or if you pass in a number it will cd up that many times
-  function up() {
-    if [[ -z "$1" ]]; then
-      cd ..
-    else
-      if [[ $1 =~ [0-9]+ ]]; then
-        cd $(printf "%0.s../" $(seq $1))
-      else
-        printf "You must enter a valid number.\n"
-      fi
-    fi
-  }
-  alias up2='cd ../..'
-  alias up3='cd ../../..'
-  alias up4='cd ../../../..'
-  alias up5='cd ../../../../..'
-  alias up6='cd ../../../../../..'
-  alias up7='cd ../../../../../../..'
-  alias up8='cd ../../../../../../../..'
-  alias up9='cd ../../../../../../../../..'
-  alias up10='cd ../../../../../../../../../..'
-  alias ut='cd /'
 
   ## Apache
   alias apache='cd /etc/apache2/sites-available/ && ls *-ssl.conf'
@@ -144,273 +125,33 @@ if [[ $- =~ i ]]; then
     alias stop='echo You are in a Vagrant VM.'
   fi
 
-  ## Docker
-  if [[ "$(uname -a | grep WSL)" != "" ]]; then
-    # This bash is running via WSL on Windows so use docker.exe
-    which winpty &>/dev/null && WINPTY='winpty ' || WINPTY=''
-    alias docker='${WINPTY}docker.exe'
-    alias docker-compose='docker-compose.exe'
-    alias docker-machine='docker-machine.exe'
-  fi
-  alias da='docker attach'
-  alias dbs='docker_build_and_start'
-  alias dc='docker-compose'
-  alias dcbt='docker_compose_build_and_maybe_tag'
-  alias dclogs='docker-compose logs'
-  alias dcps='docker-compose ps'
-  alias ddiff='docker diff'
-  alias ddown='docker-compose stop'
-  alias di='docker images'
-  alias dins='docker inspect'
-  alias distart='docker_interactive_start_stop start'
-  alias distop='docker_interactive_start_stop stop'
-  alias dm='echo "Switching docker-machine"; docker-machine'
-  alias dmnative='echo "Switching native docker"; eval $(dm env -u)'
-  alias doc="docker"
-  alias dps='docker ps'
-  alias dpsa='docker ps -a'
-  alias dready='docker_ready'
-  alias drestartl='docker start $(docker ps -ql) && docker attach $(docker ps -ql)'
-  alias drm='docker rm'
-  alias drma='docker_remove_all_containers'
-  alias drmd='docker rmi $(docker images --filter "dangling=true" -q --no-trunc)'
-  alias drmi='docker rmi'
-  alias drmia='docker_remove_all_images'
-  alias drun='docker run'
-  alias dsh='docker_shell'
-  alias dstart='docker_start_image_by_name'
-  alias dstop='docker stop'
-  alias dup='docker-compose up -d'
-
-  # Interactive Docker start/stop function using fzf (fuzzy-finder)
-  # TODO: Add ability to start any image not just a stopped container
-  function docker_interactive_start_stop() {
-    # If fzf is not installed, exit
-    which fzf &>/dev/null || { printf "Error: fzf is not installed\n"; return 1; }
-
-    # Make sure Docker is ready
-    docker_ready
-
-    # Offer help if run with -h or --help
-    if [[ "$1" =~ ^-{1,2}h[elp]?$ ]]; then
-      echo "Usage: $FUNCNAME [start/stop]" && return 1
-    fi
-
-    # Default to "start" mode if not defined
-    test -z "$1" && mode=start || mode=$1
-    local containers=()
-
-    # Check the mode
-    if [[ "$mode" == "start" ]]; then
-
-      # Start one or more containers
-      local lines="$(docker ps -a -f 'status=exited' | grep -v 'CONTAINER ID' | fzf -0 --tac -m)"
-      test -z "$lines" && { printf "No stopped Docker containers found.\n"; return 1; }
-      while read -a line; do
-        printf "\rStarting (${line[0]}) ${line[1]}...\n"
-        containers=(${containers[@]} ${line[0]})
-      done <<< $lines
-      docker start ${containers[@]} >/dev/null
-
-    elif [[ "$mode" == "stop" ]]; then
-
-      # Stop one or more containers
-      local lines="$(docker ps | grep -v 'CONTAINER ID' | fzf -0 --tac -m)"
-      test -z "$lines" && { printf "No running Docker containers found.\n"; return 1; }
-      while read -a line; do
-        printf "\rStopping (${line[0]}) ${line[1]}...\n"
-        containers=(${containers[@]} ${line[0]})
-      done <<< $lines
-      docker stop ${containers[@]} >/dev/null
-    fi
-
-    test $(echo "$lines" | wc -l) -eq 1 && printf "\nTip: By pressing tab, you can select multiple next time.\n"
-  }
-
-  # Interactive Docker function to open a shell in a running container using fzf
-  function docker_interactive_shell() {
-    # If fzf is not installed, exit
-    which fzf &>/dev/null || { printf "Error: fzf is not installed\n"; return 1; }
-
-    # Make sure Docker is ready
-    docker_ready
-
-    # Prompt for a list of running Docker containers
-    local line=($(docker ps | grep -v 'CONTAINER ID' | fzf -0 --tac --phony))
-    test -z "$line" && { printf "\rNo running Docker containers found, or none selected.\n"; return 1; }
-
-    local container_id=${line[0]}
-    local container_name=${line[1]}
-
-    # Launch bash
-    printf "\rLaunching bash shell in $container_name\n"
-    docker exec -it $container_id bash
-
-    # If bash failed, launch sh instead
-    if [[ $? -ne 0 ]]; then
-      # Clear previous error line and replace it with "using sh instead" message
-      printf "\r\e[ABash not found. Launching sh shell instead.\e[K\n"
-      docker exec -it $container_id sh
-      printf "\n"
-    fi
-  }
-
-  # Wait for Docker engine to start
-  function docker_ready() {
-    local i=1
-    docker version &>/dev/null
-    while [[ $? -ne 0 ]]; do
-      printf "\rWaiting for docker engine to start up... [$i]"
-      sleep 1
-      let i++
-      docker version &>/dev/null
-    done
-    test $i -gt 1 && printf "\n\nDocker is now ready\n\n"
-  }
-
-  # Stop and delete all Docker containers
-  function docker_remove_all_containers() {
-    docker_ready
-    local containers=($(docker ps -aq))  # Get a list of the running docker containers
-    test -z $containers && printf "\nNo containers found.\n\n" && return 1
-    printf "\nStopping ${#containers[@]} docker containers:\n"
-    docker stop ${containers[@]}   # Stop all running containers
-    printf "\nDestroying ${#containers[@]} docker containers:\n"
-    docker rm ${containers[@]}     # Destroy all containers
-    echo
-  }
-
-  # Delete all downloaded Docker images. Note: This is not necessary except to clear space
-  function docker_remove_all_images() {
-    docker_ready
-    local images=($(docker images -aq)) # Get list of images
-    test -z $images && echo "No images found." && return 1
-    printf "\nDestroying docker images:\n"
-    docker rmi ${images[@]} # Remove images
-    echo
-  }
-
-  # Run a shell in the specified Docker container (try bash first)
-  docker_shell() {
-    docker_ready
-    if [[ $# -ne 1 ]]; then
-      echo "Usage: $FUNCNAME [CONTAINER_ID/CONTAINER_NAME]" && return 1
-    fi
-    local containers=($(docker ps -aq))  # Get a list of the running docker containers
-    test -z $containers && printf "\nNo running containers found.\n\n" && return 1
-    if [[ "${containers[@]}" =~ $1 ]]; then
-      # It's a container ID
-      docker exec -it $1 bash 2>/dev/null || docker exec -it $1 sh
+  ## Changing Directories up
+  ## "up" will cd up a directory or if you pass in a number it will cd up that many times
+  function up() {
+    if [[ -z "$1" ]]; then
+      cd ..
     else
-      # It's a container name
-      docker-compose exec $1 bash 2>/dev/null || docker-compose exec $1 sh
-    fi
-  }
-
-  # Start a docker image by name
-  docker_start_image_by_name() {
-    if [[ $# -lt 1 ]]; then
-      echo "Usage $FUNCNAME IMAGENAME" && return 1
-    fi
-
-    # Check to see if a container by this name is/was previously running
-    local container_id=$(docker_get_container_id_by_name "$1")
-    if [[ ! -z "$container_id" ]]; then
-      local running_container_id=$(docker_get_running_continer_id_by_name "$1")
-      if [[ ! -z "$running_container_id" ]]; then
-        printf "\nThe docker container $1 is already running.\n"
-        local local_port=$(docker_get_local_listening_port_by_container_name "$1")
-        printf "\nYou can access it via: http://localhost:$local_port/\n\n"
-        return 0
+      if [[ $1 =~ [0-9]+ ]]; then
+        cd $(printf "%0.s../" $(seq $1))
       else
-        printf "\nStarting $1\n"
-        docker start "$1" >/dev/null
-        if [[ $? -eq 0 ]]; then
-          local local_port=$(docker_get_local_listening_port_by_container_name "$1")
-          printf "\nYou can access it via: http://localhost:$local_port/\n\n"
-          return 0
-        else
-          return 1
-        fi
+        printf "You must enter a valid number.\n"
       fi
     fi
-
-    # Didn't find an existing container, so create a new container from the image name
-    local image_id=$(docker images -q "$1")
-    local internal_port="$(docker_get_internal_service_port_from_container_by_name $1)"
-    printf "\nReady to start $1...\n\nThe docker image listens on port $internal_port.\n"
-
-    # Prompt user for what local port to map (only necessary for new container)
-    printf "What local port do you want to access it on? [$internal_port] "
-    read local_port
-    test -z "$local_port" && local_port=$internal_port
-
-    # Create the container
-    docker run -d --name "$1" -p $local_port:$internal_port $image_id >/dev/null
-    if [[ $? -eq 0 ]]; then
-      printf "\n$1 is now running.\n\nYou can access it at:\n\nhttp://localhost:$local_port/\n\n"
-    else
-      printf "\n$1 failed to start.\n\n"
-      return 1
-    fi
   }
+  alias up2='cd ../..'
+  alias up3='cd ../../..'
+  alias up4='cd ../../../..'
+  alias up5='cd ../../../../..'
+  alias up6='cd ../../../../../..'
+  alias up7='cd ../../../../../../..'
+  alias up8='cd ../../../../../../../..'
+  alias up9='cd ../../../../../../../../..'
+  alias up10='cd ../../../../../../../../../..'
+  alias ut='cd /'
 
-  # Docker build and start
-  # Usage: dbs tag-name [path]
-  # [path] assumes current directory
-  docker_build_and_start() {
-    if [[ $# -lt 1 ]]; then
-      echo "Usage $FUNCNAME TAGNAME [DIRNAME]" && return 1
-    fi
-    if [ $# -gt 1 ]; then
-      local args="-t $@"
-    else
-      local args="-t $1 ."
-    fi
-    docker build $args
-    if [[ $? -eq 0 ]]; then
-      docker_start_image_by_name "$1"
-    fi
-  }
-
-  # Docker-compose build with optional tagging
-  docker_compose_build_and_maybe_tag() {
-    if [[ $# -lt 1 ]]; then
-      echo "Usage $FUNCNAME DIRNAME [TAGNAME ...]" && return 1
-    fi
-    local args="$1"
-    shift
-    if [ $# -ge 2 ]; then
-      args="$args -t $@"
-    fi
-    docker-compose build $args
-  }
-
-  # Get the docker container's locally-mapped port by name
-  docker_get_local_listening_port_by_container_name() {
-    docker inspect -f '{{.NetworkSettings.Ports}}' "$1" | sed -r -e 's/.* ([0-9]+)}.*/\1/'
-  }
-
-  docker_get_internal_service_port_from_container_by_name() {
-    docker inspect -f '{{.ContainerConfig.ExposedPorts}}' $(docker images -q "$1") | sed -r -e 's/.*\[([0-9]+)\/.*/\1/'
-  }
-
-  # Get a docker image id (or list of id's) by name (wildcards allowed)
-  docker_get_image_id_by_name() {
-    docker images -q "$1"
-  }
-
-  # Get a single docker container id by name
-  docker_get_container_id_by_name() {
-    docker ps -aqf "name=$1"
-  }
-
-  # Get container id of currently running container name
-  docker_get_running_continer_id_by_name() {
-    docker ps -qf "name=$1"
-  }
-
-
+  # Include Docker aliases if Docker is installed
+  test "$bash_on_windows" -eq 1 && check_for_docker='docker.exe' || check_for_docker='docker'
+  which $check_for_docker &>/dev/null && source "$profile_sh_dir/docker_shortcuts.sh"
 
   ## Useful Functions
 
@@ -634,7 +375,7 @@ if [[ $- =~ i ]]; then
     }
 
     # Get Aliases from .md file passed in
-    OUT="$(cat $PROFILE_SH_DIR/$1 | grep -E '^\|')"
+    OUT="$(cat $profile_sh_dir/$1 | grep -E '^\|')"
     FIRST_LINE="$(echo "$OUT" | head -n1)"
     LENGTH=$((${#FIRST_LINE}+2))
     PADDING=$((($LENGTH / 2) - 10))
