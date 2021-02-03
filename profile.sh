@@ -65,13 +65,20 @@ if [[ $- =~ i ]]; then
   alias upt='echo Load Average w/ Graph && perl -e '"'"'while(1){`cat /proc/loadavg` =~ /^([^ ]+)/;printf("%5s %s\n",$1,"#"x($1*10));sleep 4}'"'"' 2>/dev/null'
   alias bin='cd ~/bin'
 
-  # up will cd up a directory or if you pass in a number it will cd up that many times
+  ## Diff Aliases
+  alias vimdiff='vimdiff -c "set diffopt=filler,context:0,iwhite"'
+  alias colordiff='colordiff -w'
+  alias sdiff='sdiff -bBWs'
+  alias diffy='test $COLUMNS -ge 155 && COLS=154 || COLS=$COLUMNS; diff -yw --suppress-common-lines -W $COLS'
+
+  ## Changing Directories up
+  ## "up" will cd up a directory or if you pass in a number it will cd up that many times
   function up() {
     if [[ -z "$1" ]]; then
       cd ..
     else
-      if [[ "$(is_num $1)" == 1 ]]; then
-        cd $(for i in $(seq $1); do printf "../"; done)
+      if [[ $1 =~ [0-9]+ ]]; then
+        cd $(printf "%0.s../" $(seq $1))
       else
         printf "You must enter a valid number.\n"
       fi
@@ -143,7 +150,7 @@ if [[ $- =~ i ]]; then
   alias docker-compose='docker-compose.exe'
   alias docker-machine='docker-machine.exe'
   alias da='docker attach'
-  alias dbt='docker_build_and_maybe_tag'
+  alias dbs='docker_build_and_start'
   alias dc='docker-compose'
   alias dcbt='docker_compose_build_and_maybe_tag'
   alias dclogs='docker-compose logs'
@@ -157,7 +164,8 @@ if [[ $- =~ i ]]; then
   alias dm='echo "Switching docker-machine"; docker-machine'
   alias dmnative='echo "Switching native docker"; eval $(dm env -u)'
   alias doc="docker"
-  alias dps='docker ps -a'
+  alias dps='docker ps'
+  alias dpsa='docker ps -a'
   alias dready='docker_ready'
   alias drestartl='docker start $(docker ps -ql) && docker attach $(docker ps -ql)'
   alias drm='docker rm'
@@ -167,11 +175,12 @@ if [[ $- =~ i ]]; then
   alias drmia='docker_remove_all_images'
   alias drun='docker run'
   alias dsh='docker_shell'
-  alias dstart='docker start'
+  alias dstart='docker_start_image_by_name'
   alias dstop='docker stop'
   alias dup='docker-compose up -d'
 
   # Interactive Docker start/stop function using fzf (fuzzy-finder)
+  # TODO: Add ability to start any image not just a stopped container
   function docker_interactive_start_stop() {
     # If fzf is not installed, exit
     which fzf &>/dev/null || { printf "Error: fzf is not installed\n"; return 1; }
@@ -295,17 +304,70 @@ if [[ $- =~ i ]]; then
     fi
   }
 
-  # Docker build with optional tagging
-  docker_build_and_maybe_tag() {
+  # Start a docker image by name
+  docker_start_image_by_name() {
     if [[ $# -lt 1 ]]; then
-      echo "Usage $FUNCNAME DIRNAME [TAGNAME ...]" && return 1
+      echo "Usage $FUNCNAME IMAGENAME" && return 1
     fi
-    local args="$1"
-    shift
-    if [ $# -ge 2 ]; then
-      args="$args -t $@"
+
+    # Check to see if a container by this name is/was previously running
+    local container_id=$(docker_get_container_id_by_name "$1")
+    if [[ ! -z "$container_id" ]]; then
+      local running_container_id=$(docker_get_running_continer_id_by_name "$1")
+      if [[ ! -z "$running_container_id" ]]; then
+        printf "\nThe docker container $1 is already running.\n"
+        local local_port=$(docker_get_local_listening_port_by_container_name "$1")
+        printf "\nYou can access it via: http://localhost:$local_port/\n\n"
+        return 0
+      else
+        printf "\nStarting $1\n"
+        docker start "$1" >/dev/null
+        if [[ $? -eq 0 ]]; then
+          local local_port=$(docker_get_local_listening_port_by_container_name "$1")
+          printf "\nYou can access it via: http://localhost:$local_port/\n\n"
+          return 0
+        else
+          return 1
+        fi
+      fi
+    fi
+
+    # Didn't find an existing container, so create a new container from the image name
+    local image_id=$(docker images -q "$1")
+    local internal_port="$(docker_get_internal_service_port_from_container_by_name $1)"
+    printf "\nReady to start $1...\n\nThe docker image listens on port $internal_port.\n"
+
+    # Prompt user for what local port to map (only necessary for new container)
+    printf "What local port do you want to access it on? [$internal_port] "
+    read local_port
+    test -z "$local_port" && local_port=$internal_port
+
+    # Create the container
+    docker run -d --name "$1" -p $local_port:$internal_port $image_id >/dev/null
+    if [[ $? -eq 0 ]]; then
+      printf "\n$1 is now running.\n\nYou can access it at:\n\nhttp://localhost:$local_port/\n\n"
+    else
+      printf "\n$1 failed to start.\n\n"
+      return 1
+    fi
+  }
+
+  # Docker build and start
+  # Usage: dbs tag-name [path]
+  # [path] assumes current directory
+  docker_build_and_start() {
+    if [[ $# -lt 1 ]]; then
+      echo "Usage $FUNCNAME TAGNAME [DIRNAME]" && return 1
+    fi
+    if [ $# -gt 1 ]; then
+      local args="-t $@"
+    else
+      local args="-t $1 ."
     fi
     docker build $args
+    if [[ $? -eq 0 ]]; then
+      docker_start_image_by_name "$1"
+    fi
   }
 
   # Docker-compose build with optional tagging
@@ -320,6 +382,31 @@ if [[ $- =~ i ]]; then
     fi
     docker-compose build $args
   }
+
+  # Get the docker container's locally-mapped port by name
+  docker_get_local_listening_port_by_container_name() {
+    docker inspect -f '{{.NetworkSettings.Ports}}' "$1" | sed -r -e 's/.* ([0-9]+)}.*/\1/'
+  }
+
+  docker_get_internal_service_port_from_container_by_name() {
+    docker inspect -f '{{.ContainerConfig.ExposedPorts}}' $(docker images -q "$1") | sed -r -e 's/.*\[([0-9]+)\/.*/\1/'
+  }
+
+  # Get a docker image id (or list of id's) by name (wildcards allowed)
+  docker_get_image_id_by_name() {
+    docker images -q "$1"
+  }
+
+  # Get a single docker container id by name
+  docker_get_container_id_by_name() {
+    docker ps -aqf "name=$1"
+  }
+
+  # Get container id of currently running container name
+  docker_get_running_continer_id_by_name() {
+    docker ps -qf "name=$1"
+  }
+
 
 
   ## Useful Functions
@@ -394,11 +481,11 @@ if [[ $- =~ i ]]; then
     # Loop through again to display output in columns
     while read line; do
       while IFS="$sep" read -r col_line col_path col_data; do
-        col_line=$(echo $col_line | sed -r "s/$filter_out_colors//g")     # Strip out color codes everywhere
-        col_path=$(echo $col_path | sed -r "s/$filter_out_colors//g")     # Strip out color codes everywhere
-        col_data=$(echo $col_data | sed -r "s/^($filter_out_colors)*//g") # Trim leading color codes only
-        col_data=$(echo $col_data)                                        # Trim spaces
-        printf "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "$col_data"
+        col_line=$(echo "$col_line" | sed -r "s/$filter_out_colors//g")         # Strip out color codes everywhere
+        col_path=$(echo "$col_path" | sed -r "s/$filter_out_colors//g")         # Strip out color codes everywhere
+        col_data=$(echo "$col_data" | sed -r "s/^($filter_out_colors)*//g")     # Trim leading color codes only
+        col_data=$(echo "$col_data" | sed -r -e 's/^[ \t]*//' -e 's/[ \t]*$//') # Trim leading/trailing spaces
+        printf "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "${col_data//^\w/}"
       done < <(echo "${line[@]}")
     done < <(echo "${find[@]}")
   }
@@ -528,6 +615,9 @@ if [[ $- =~ i ]]; then
 
   # Find a file or directory through parent directories
   find_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
+
+  # Find a file or directory through parent directories
+  go_up(){ p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; cd "$p"; }
 
   # Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
   mp3_64(){ for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }
