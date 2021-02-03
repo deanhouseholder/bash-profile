@@ -145,10 +145,13 @@ if [[ $- =~ i ]]; then
   fi
 
   ## Docker
-  which winpty &>/dev/null && WINPTY='winpty ' || WINPTY=''
-  alias docker='${WINPTY}docker.exe'
-  alias docker-compose='docker-compose.exe'
-  alias docker-machine='docker-machine.exe'
+  if [[ "$(uname -a | grep WSL)" != "" ]]; then
+    # This bash is running via WSL on Windows so use docker.exe
+    which winpty &>/dev/null && WINPTY='winpty ' || WINPTY=''
+    alias docker='${WINPTY}docker.exe'
+    alias docker-compose='docker-compose.exe'
+    alias docker-machine='docker-machine.exe'
+  fi
   alias da='docker attach'
   alias dbs='docker_build_and_start'
   alias dc='docker-compose'
