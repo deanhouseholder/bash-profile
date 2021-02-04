@@ -104,6 +104,7 @@ fi
 
 # Download and auto-load bash-profile
 # If file already exists, prompt to overwrite
+unset prompt_yn
 if [[ -f "$file_profile" ]]; then
   prompt_yn "\nDo you want to update your copy of the bash-profile with the latest version? [Y/n] " Y
 fi
@@ -120,9 +121,9 @@ if [[ $yn == "Y" ]] || [[ ! -f "$file_profile" ]]; then
   echo
 fi
 
-# Add auto loading of new profile.sh script in .bashrc if it isn't there
+# Add auto loading of new profile.sh script in .bash_profile if it isn't there
 if [[ -z "$(grep "source $file_profile" $file_startup 2>/dev/null)" ]]; then
-  printf "\nsource $file_profile\n" >> $file_startup
+  printf "\n# Include the bash profile\nsource $file_profile\n" >> $file_startup
 fi
 
 # Configure Git
@@ -218,6 +219,7 @@ if [[ $? -ne 0 ]]; then
   prompt_yn "Do you wish to install fzf? [Y/n] " Y
   if [[ $yn == Y ]]; then
     git clone --depth 1 "$repo_fzf" $dir_fzf
+    echo
     $dir_fzf/install
   fi
   echo
