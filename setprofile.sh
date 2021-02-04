@@ -115,6 +115,7 @@ if [[ $yn == "Y" ]] || [[ ! -f "$file_profile" ]]; then
     git clone "$repo_bash_profile"
   fi
   cd -
+  echo
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
@@ -138,10 +139,12 @@ if [[ $yn == "Y" ]]; then
   if [[ -z "$(git config --global user.name)" ]]; then
     read -p "What name would you like to use for git commits? (typically your full name) " user_name
     git config --global user.name "$user_name"
+    echo
   fi
   if [[ -z "$(git config --global user.email)" ]]; then
     read -p "What email address would you like to use for git commits? " user_email
     git config --global user.email "$user_email"
+    echo
   fi
   prompt_yn "Would you like to update your Git colors/options configuration? [Y/n] " Y
   if [[ "$yn" == "Y" ]]; then
@@ -169,6 +172,7 @@ if [[ $yn == "Y" ]]; then
       git config --global color.decorate.HEAD "50"
       git config --global push.default "simple"
   fi
+  echo
 
   # Clone or update the gitprompt repo
   prompt_yn "Do want to install/update gitprompt? [Y/n] " "Y"
@@ -193,11 +197,11 @@ if [[ $yn == "Y" ]]; then
 
     # Save the machine's name to .displayname
     if [[ ! -f $file_displayname ]]; then
-      printf "\nWhat display name would you use for this server (used in the title and prompt)?\n"
-      read server_name
-      if [[ ! -z "$server_name" ]]; then
-        echo "$server_name" > $file_displayname
-        printf "\nalias set_title='change_title $(cat ~/.displayname)'\nset_title\n" >> $file_local_env
+      printf "\nWhat display name would you use for this machine (used in the title and prompt)?\n"
+      read machine_name
+      if [[ ! -z "$machine_name" ]]; then
+        echo "$machine_name" > $file_displayname
+        printf "\nalias set_title=\"change_title $(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
       else
         hostname > $file_displayname
       fi
@@ -210,6 +214,6 @@ source "$file_profile"
 source "$file_gitprompt"
 
 # Clean up
-unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt server_name url_bash_profile url_git_ssh_keys user_email user_name yn
+unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt machine_name url_bash_profile url_git_ssh_keys user_email user_name yn
 
 printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"

@@ -30,8 +30,8 @@ alias n='npm'
 alias ni='npm install'
 
 ## Vagrant
-if [[ $bash_env != "vagrant" ]]; then
-  test "$bash_on_windows" -eq 1 && alias vagrant='vagrant.exe'
+if [[ "$bash_env" != "vagrant" ]]; then
+  test $bash_on_windows -eq 1 && alias vagrant='vagrant.exe'
   alias vu='vagrant up'
   alias vh='vagrant halt'
   alias vs='vagrant ssh'

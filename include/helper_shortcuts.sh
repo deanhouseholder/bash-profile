@@ -61,7 +61,7 @@ is_num() { if [[ "$1" =~ [0-9]+ ]]; then echo 1; else echo 0; fi; }
 is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; }
 
 # Set the window title to function arguments
-change_title(){ test -z "$1" && printf '\033]2;%s\007' "$(echo $@)" || printf "No title passed to function\n"; }
+change_title(){ test -z "$1" && printf "No title passed to function\n" || printf '\033]2;%s\007' "$(echo $@)"; }
 
 # Find a file or directory through parent directories
 find_up(){ local p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }

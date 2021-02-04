@@ -13,6 +13,7 @@ if [[ $- =~ i ]]; then
   export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
   profile_sh_path="$BASH_SOURCE"
   profile_sh_dir="${profile_sh_path%/profile.sh}"
+  bash_on_windows=0
 
   ## Detect Environment and set vars
   os_ver="$(cat /proc/version 2>/dev/null)"
@@ -22,7 +23,7 @@ if [[ $- =~ i ]]; then
     export dir_prefix='/cygdrive/c/'
     export bash_on_windows=1
   # WSL on Windows
-  elif [[ "$os_ver" =~ WSL ]]; then
+  elif [[ "$os_ver" =~ microsoft-standard ]]; then
     export bash_env='wsl'
     export dir_prefix='/'
     export bash_on_windows=1
