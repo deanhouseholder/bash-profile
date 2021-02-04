@@ -220,7 +220,8 @@ if [[ $? -ne 0 ]]; then
   if [[ $yn == Y ]]; then
     git clone --depth 1 "$repo_fzf" $dir_fzf
     echo
-    $dir_fzf/install
+    $dir_fzf/install --all --no-zsh --no-fish
+    printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
   fi
   echo
 fi
