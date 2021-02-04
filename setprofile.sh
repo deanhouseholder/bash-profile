@@ -7,15 +7,17 @@
 dir_bin=~/bin
 dir_ssh=~/.ssh
 dir_code=~/code
+dir_bash_profile="$dir_code/bash-profile"
 dir_gitprompt="$dir_code/gitprompt"
 file_startup=~/.bash_profile
-file_profile="$dir_bin/profile.sh"
+file_profile="$dir_bash_profile/profile.sh"
 file_local_env="$dir_bin/local_env.sh"
 file_git_ssh_keys="$dir_bin/ssh-keys.sh"
 file_gitprompt="$dir_gitprompt/default-prompt.sh"
 file_displayname=~/.displayname
 url_bash_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile/master/profile.sh"
 url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
+repo_bash_profile="https://github.com/deanhouseholder/bash-profile.git"
 repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
 
 # Start install script
@@ -77,7 +79,7 @@ fi
 
 # Add ssh-keys.sh if it doesn't exist
 prompt_yn "\nDo you want to install/update ssh-keys script to manage your ssh keys? [y/N] " N
-if [[ $yn == "Y" ]]; then
+if [[ $yn == Y ]]; then
   curl -s "$url_git_ssh_keys" -o "$file_git_ssh_keys"
   if [[ -z "$(grep 'ssh_keys_load=' $file_local_env)" ]]; then
     printf "ssh_keys_load=()\nssh_keys_pass=()\nsource $file_git_ssh_keys\n\n" >> $file_local_env
@@ -101,11 +103,18 @@ fi
 # Download and auto-load bash-profile
 # If file already exists, prompt to overwrite
 if [[ -f "$file_profile" ]]; then
-  prompt_yn "\nDo you want to overwrite your profile.sh with the latest version? [Y/n] " Y
+  prompt_yn "\nDo you want to update your copy of the bash-profile with the latest version? [Y/n] " Y
 fi
 # If ok to overwrite or file is not there, download it
 if [[ $yn == "Y" ]] || [[ ! -f "$file_profile" ]]; then
-  curl -s "$url_bash_profile" -o "$file_profile"
+  if [[ -d "$dir_bash_profile" ]]; then
+    cd "$dir_bash_profile"
+    git pull
+  else
+    cd "$dir_code"
+    git clone "$repo_bash_profile"
+  fi
+  cd -
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
@@ -201,6 +210,6 @@ source "$file_profile"
 source "$file_gitprompt"
 
 # Clean up
-unset dir_bin dir_code dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_gitprompt server_name url_bash_profile url_git_ssh_keys user_email user_name yn
+unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt server_name url_bash_profile url_git_ssh_keys user_email user_name yn
 
 printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"

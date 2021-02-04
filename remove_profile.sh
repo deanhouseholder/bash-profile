@@ -6,8 +6,8 @@ echo "  .bash_profile           - Remove the line: # Include the Git Prompt func
 echo "  .bash_profile           - Remove the line: source ~/code/gitprompt/default-prompt.sh"
 echo "  .displayname            - To be deleted"
 echo "  .vimrc                  - Remove the 2 added lines"
-echo "  bin/profile.sh          - To be deleted"
 echo "  bin/ssh-keys.sh         - To be deleted"
+echo "  code/bash-profile/      - To be deleted"
 echo "  code/gitprompt/         - To be deleted"
 echo "  bin/local_env.sh        - To be renamed to bin/local_env.sh.bak"
 
@@ -25,7 +25,7 @@ fi
 echo "Removing the two lines added by the setprofile.sh to .vimrc"
 sed -i -e '/^syntax on$/d' -e '/^set nu/d' ~/.vimrc
 rm -vf ~/.displayname
-rm -vf ~/bin/profile.sh
+rm -vf ~/code/bash-profile
 rm -vf ~/bin/ssh-keys.sh
 echo "Renaming ~/bin/local_env.sh to ~/bin/local_env.sh.bak"
 mv -vf ~/bin/local_env.sh ~/bin/local_env.sh.bak
