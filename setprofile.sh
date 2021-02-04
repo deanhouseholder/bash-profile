@@ -9,6 +9,7 @@ dir_ssh=~/.ssh
 dir_code=~/code
 dir_bash_profile="$dir_code/bash-profile"
 dir_gitprompt="$dir_code/gitprompt"
+dir_fzf="$dir_code/fzf"
 file_startup=~/.bash_profile
 file_profile="$dir_bash_profile/profile.sh"
 file_local_env="$dir_bin/local_env.sh"
@@ -19,6 +20,7 @@ url_bash_profile="https://raw.githubusercontent.com/deanhouseholder/bash-profile
 url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
 repo_bash_profile="https://github.com/deanhouseholder/bash-profile.git"
 repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
+repo_fzf="https://github.com/junegunn/fzf.git"
 
 # Start install script
 printf "\nStarting configuration of bash profile\n"
@@ -119,7 +121,7 @@ if [[ $yn == "Y" ]] || [[ ! -f "$file_profile" ]]; then
 fi
 
 # Add auto loading of new profile.sh script in .bashrc if it isn't there
-if [[ -z "$(grep "source $file_profile" $file_startup)" ]]; then
+if [[ -z "$(grep "source $file_profile" $file_startup 2>/dev/null)" ]]; then
   printf "\nsource $file_profile\n" >> $file_startup
 fi
 
@@ -207,6 +209,18 @@ if [[ $yn == "Y" ]]; then
       fi
     fi
   fi
+fi
+
+# Prompt to install fzf
+which fzf &>/dev/null
+if [[ $? -ne 0 ]]; then
+  printf "\nSeveral functions can be enhanced by installing the fuzzy finder (fzf).\n"
+  prompt_yn "Do you wish to install fzf? [Y/n] " Y
+  if [[ $yn == Y ]]; then
+    git clone --depth 1 "$repo_fzf" $dir_fzf
+    $dir_fzf/install
+  fi
+  echo
 fi
 
 # Load new profile script
