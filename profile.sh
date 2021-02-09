@@ -9,6 +9,7 @@ if [[ $- =~ i ]]; then
   ## Turn off CTRL+S mode
   stty -ixon
 
+  # Set defaults
   export TERM='xterm-256color'
   export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
   profile_sh_path="$BASH_SOURCE"
@@ -94,8 +95,14 @@ if [[ $- =~ i ]]; then
 
   # Include Docker aliases if Docker is installed
   test "$bash_on_windows" -eq 1 && check_for_docker='docker.exe' || check_for_docker='docker'
-  which $check_for_docker &>/dev/null && source "$profile_sh_dir/include/docker_shortcuts.sh"
+  if [[ -x "$(type -fP $check_for_docker)" ]]; then
+    source "$profile_sh_dir/include/docker_shortcuts.sh"
+  fi
 
+  # Include fuzzy finder shortcuts if fzf is installed
+  if [[ -x "$(type -fP fzf)" ]] && [[ -x "$(type -fP column)" ]]; then
+    source "$profile_sh_dir/include/fzf_shortcuts.sh"
+  fi
 
   ## Include local_env.sh
   test ! -f ~/bin/local_env.sh && touch ~/bin/local_env.sh

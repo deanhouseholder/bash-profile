@@ -59,13 +59,13 @@ cat(){
     command cat "$@"
   elif [[ -d "$1" ]]; then           # Directory
     ls -l "$1"
-  elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ ! -z "$(which jq 2>&1 | grep -v 'no jq')" ]]; then  # If .json file then send through JQ (if installed)
+  elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ -x "$(type -fP jq)" ]]; then  # If .json file then send through JQ (if installed)
     command cat "$@" | jq
-  elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ ! -z "$(which glow 2>&1 | grep -v 'no glow')" ]]; then  # If .md file then view with glow (if installed)
+  elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ -x "$(type -fP glow)" ]]; then  # If .md file then view with glow (if installed)
     glow "$@"
   elif [[ "$1" =~ ^\>.*$ ]]; then    # If concatenating multiple files use regular cat
     command cat "$@"
-  elif [[ ! -z "$1" ]] && [[ ! -z "$(which ccat 2>&1 | grep -v 'no ccat')" ]]; then  # If ccat is installed use ccat
+  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP ccat)" ]]; then  # If ccat is installed use ccat
     ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white "$@"
   else                               # Else use regular cat
     command cat "$@"
@@ -116,17 +116,17 @@ e() {
   printf "\e[32mExtracting $filename\e[0m\n"
 
   # Check if extraction command is installed/executable
-  [[ ! -x "$(which $cmd 2>&1 | grep -v 'no ')" ]] && printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
+  [[ -x "$(type -fP fzf)" ]] || printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
 
   # Check if pv is enabled and installed
-  if [[ $usepv -eq 1 && -x "$(which pv 2>&1 | grep -v 'no pv')" ]]; then
+  if [[ $usepv -eq 1 ]] && [[ -x "$(type -fP pv)" ]]; then
     filesize=$(stat -c '%s' "$1")
     newfile="${1%%$ext}"
 
     # Handle special case for .zip since unzip command doesn't allow piping and funzip doesn't allow multiple files
     if [[ $ext == ".zip" ]]; then
       # If the .zip contains 1 file and if funzip and pv are installed we can show a progress bar
-      if [[ $(zipinfo -t "$1" | awk '{print $1}') -eq 1 && -x "$(which funzip 2>&1 | grep -v 'no funzip')" ]]; then
+      if [[ $(zipinfo -t "$1" | awk '{print $1}') -eq 1 ]] && [[ -x "$(type -fP funzip)" ]]; then
         cat "$1" | pv -s $filesize -i 0.1 -D 0 | funzip > "$newfile"
       else
         unzip "$1"
@@ -143,6 +143,7 @@ e() {
 }
 
 ## Display Alias Menu
+# $1 - path to a markdown file with a table to be displayed in the terminal
 display_alias_menu() {
 
   repeat_string() {
@@ -150,18 +151,18 @@ display_alias_menu() {
   }
 
   # Get Aliases from .md file passed in
-  OUT="$(cat $profile_sh_dir/$1 | grep -E '^\|')"
-  FIRST_LINE="$(echo "$OUT" | head -n1)"
-  LENGTH=$((${#FIRST_LINE}+2))
-  PADDING=$((($LENGTH / 2) - 10))
-  BAR="$(repeat_string '-' $LENGTH)"
+  local OUT="$(cat $1 | grep -E '^\|')"
+  local FIRST_LINE="$(echo "$OUT" | head -n1)"
+  local LENGTH=$((${#FIRST_LINE}+2))
+  local PADDING=$((($LENGTH / 2) - 10))
+  local BAR="$(repeat_string '-' $LENGTH)"
 
-  HELP="$(echo "$OUT" | awk '{
-   gsub("^\\| ([a-z\\[\\]][^ ]*)", "| \033[36m"$2"\033[37m");
-   gsub("\\| Alias Name", "| \033[1;37mAlias Name\033[0;37m");
-   gsub("\\| Description", "| \033[1;37mDescription\033[0;37m");
-   gsub("\\|", " | ");
-   print $0
+  local HELP="$(echo "$OUT" | awk '{
+    gsub("^\\| ([a-z\\[\\]][^ ]*)", "| \033[36m"$2"\033[37m");
+    gsub("\\| Alias Name", "| \033[1;37mAlias Name\033[0;37m");
+    gsub("\\| Description", "| \033[1;37mDescription\033[0;37m");
+    gsub("\\|", " | ");
+    print $0
   }')"
 
   printf "\n$(repeat_string ' ' $PADDING)${HEADER}$2$N\n"

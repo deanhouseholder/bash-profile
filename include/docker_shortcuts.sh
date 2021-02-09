@@ -2,7 +2,7 @@
 
 if [[ "$bash_on_windows" -eq 1 ]]; then
   # This bash is running on Windows so use docker.exe
-  which winpty &>/dev/null && alias docker='winpty docker.exe' || alias docker='docker.exe'
+  if [[ -x "$(type -fP winpty)" ]] && alias docker='winpty docker.exe' || alias docker='docker.exe'
   alias docker-compose='docker-compose.exe'
   alias docker-machine='docker-machine.exe'
 fi
@@ -40,7 +40,7 @@ alias dup='docker-compose up -d'
 # TODO: Add ability to start any image not just a stopped container
 function docker_interactive_start_stop() {
   # If fzf is not installed, exit
-  which fzf &>/dev/null || { printf "Error: fzf is not installed\n"; return 1; }
+  [[ -x "$(type -fP fzf)" ]] || { printf "Error: fzf is not installed\n"; return 1; }
 
   # Make sure Docker is ready
   docker_ready
@@ -84,7 +84,7 @@ function docker_interactive_start_stop() {
 # Interactive Docker function to open a shell in a running container using fzf
 function docker_interactive_shell() {
   # If fzf is not installed, exit
-  which fzf &>/dev/null || { printf "Error: fzf is not installed\n"; return 1; }
+  [[ -x "$(type -fP fzf)" ]] || { printf "Error: fzf is not installed\n"; return 1; }
 
   # Make sure Docker is ready
   docker_ready
