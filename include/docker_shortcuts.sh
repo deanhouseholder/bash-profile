@@ -2,7 +2,7 @@
 
 if [[ "$bash_on_windows" -eq 1 ]]; then
   # This bash is running on Windows so use docker.exe
-  if [[ -x "$(type -fP winpty)" ]] && alias docker='winpty docker.exe' || alias docker='docker.exe'
+  [[ -x "$(type -fP winpty)" ]] && alias docker='winpty docker.exe' || alias docker='docker.exe'
   alias docker-compose='docker-compose.exe'
   alias docker-machine='docker-machine.exe'
 fi
