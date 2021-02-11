@@ -102,6 +102,10 @@ if [[ $- =~ i ]]; then
   # Include fuzzy finder shortcuts if fzf is installed
   if [[ -x "$(type -fP fzf)" ]] && [[ -x "$(type -fP column)" ]]; then
     source "$profile_sh_dir/include/fzf_shortcuts.sh"
+  elif [[ -f ~/.fzf.bash ]]; then
+    # Load FZF if not loaded
+    source ~/.fzf.bash
+    source "$profile_sh_dir/include/fzf_shortcuts.sh"
   fi
 
   ## Include local_env.sh
