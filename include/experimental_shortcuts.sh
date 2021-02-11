@@ -6,11 +6,11 @@
 #   "cd logs" will take you to /var/log/apache2/
 # Setup:
 #   Inside your local_env.sh script, define them in this manner:
-#     cd_array=( \
-#       'bin'='/root/bin' \
-#       'www'='/var/www' \
-#       'logs'='/var/log/apache2' \
-#       'apache'='/etc/apache2/sites-available' \
+#     cd_array=(
+#       'bin'='/root/bin'
+#       'www'='/var/www'
+#       'logs'='/var/log/apache2'
+#       'apache'='/etc/apache2/sites-available'
 #     )
 cd(){
   if [[ "$#" == "0" ]]; then
