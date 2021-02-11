@@ -22,6 +22,7 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
 
 
     # Allow user to interactively select packages to be installed based on input
+    # TODO: allow for a parameter that switches modes from "contains" to "starts-with" to "exact"
     apt_fuzzy_install() {
       # Check input
       if [[ -z "$1" ]]; then

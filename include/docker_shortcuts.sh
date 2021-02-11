@@ -1,5 +1,6 @@
 ## Docker Shortcuts
 
+# Docker Aliases
 if [[ "$bash_on_windows" -eq 1 ]]; then
   # This bash is running on Windows so use docker.exe
   [[ -x "$(type -fP winpty)" ]] && alias docker='winpty docker.exe' || alias docker='docker.exe'
@@ -8,18 +9,11 @@ if [[ "$bash_on_windows" -eq 1 ]]; then
 fi
 alias da='docker attach'
 alias dbs='docker_build_and_start'
-alias dc='docker-compose'
-alias dcbt='docker_compose_build_and_maybe_tag'
-alias dclogs='docker-compose logs'
-alias dcps='docker-compose ps'
 alias ddiff='docker diff'
-alias ddown='docker-compose stop'
 alias di='docker images'
 alias dins='docker inspect'
 alias distart='docker_interactive_start_stop start'
 alias distop='docker_interactive_start_stop stop'
-alias dm='echo "Switching docker-machine" && docker-machine'
-alias dmnative='echo "Switching native docker" && eval $(dm env -u)'
 alias doc='docker'
 alias dps='docker ps'
 alias dpsa='docker ps -a'
@@ -34,7 +28,18 @@ alias drun='docker run'
 alias dsh='docker_shell'
 alias dstart='docker_start_image_by_name'
 alias dstop='docker stop'
+
+# Docker Compose
+alias ddown='docker-compose stop'
+alias dc='docker-compose'
+alias dcbt='docker_compose_build_and_maybe_tag'
+alias dclogs='docker-compose logs'
+alias dcps='docker-compose ps'
 alias dup='docker-compose up -d'
+
+# Docker Machine
+alias dm='echo "Switching docker-machine" && docker-machine'
+alias dmnative='echo "Switching native docker" && eval $(dm env -u)'
 
 # Interactive Docker start/stop function using fzf (fuzzy-finder)
 # TODO: Add ability to start any image not just a stopped container
@@ -47,7 +52,7 @@ function docker_interactive_start_stop() {
 
   # Offer help if run with -h or --help
   if [[ "$1" =~ ^-{1,2}h[elp]?$ ]]; then
-    echo "Usage: $FUNCNAME [start/stop]" && return 1
+    echo "Usage: distart [start/stop]" && return 1
   fi
 
   # Default to "start" mode if not defined
@@ -148,7 +153,7 @@ function docker_remove_all_images() {
 docker_shell() {
   docker_ready
   if [[ $# -ne 1 ]]; then
-    echo "Usage: $FUNCNAME [CONTAINER_ID/CONTAINER_NAME]" && return 1
+    echo "Usage: dsh [CONTAINER_ID/CONTAINER_NAME]" && return 1
   fi
   local containers=($(docker ps -aq))  # Get a list of the running docker containers
   test -z $containers && printf "\nNo running containers found.\n\n" && return 1
@@ -164,7 +169,7 @@ docker_shell() {
 # Start a docker image by name
 docker_start_image_by_name() {
   if [[ $# -lt 1 ]]; then
-    echo "Usage $FUNCNAME IMAGENAME" && return 1
+    echo "Usage dstart [IMAGENAME]" && return 1
   fi
 
   # Check to see if a container by this name is/was previously running
@@ -214,7 +219,7 @@ docker_start_image_by_name() {
 # [path] assumes current directory
 docker_build_and_start() {
   if [[ $# -lt 1 ]]; then
-    echo "Usage $FUNCNAME TAGNAME [DIRNAME]" && return 1
+    echo "Usage dbs TAGNAME [DIRNAME]" && return 1
   fi
   if [ $# -gt 1 ]; then
     local args="-t $@"
@@ -230,7 +235,7 @@ docker_build_and_start() {
 # Docker-compose build with optional tagging
 docker_compose_build_and_maybe_tag() {
   if [[ $# -lt 1 ]]; then
-    echo "Usage $FUNCNAME DIRNAME [TAGNAME ...]" && return 1
+    echo "Usage dcbt DIRNAME [TAGNAME ...]" && return 1
   fi
   local args="$1"
   shift
