@@ -122,12 +122,12 @@ if [[ -f "$file_profile" ]]; then
   else
     echo "Your bash-profile is up-to-date."
   fi
-  cd -
+  cd - >/dev/null
 else
   mkdir -p "$dir_bash_profile"
   cd "$dir_bash_profile"
   git clone -q "$repo_bash_profile" .
-  cd -
+  cd - >/dev/null
   echo "Installed"
 fi
 echo
@@ -239,7 +239,7 @@ if [[ $yn == Y ]]; then
         git pull -q
       fi
     fi
-    cd -
+    cd - >/dev/null
   else
     # Install gitprompt
     printf "gitprompt provides a modern, nice-looking bash prompt which shows the current git branch "
@@ -278,9 +278,9 @@ if [[ $? -ne 0 ]]; then
   printf "\nSeveral functions can be enhanced by installing the fuzzy finder (fzf).\n"
   prompt_yn "Do you wish to install fzf? [Y/n] " Y
   if [[ $yn == Y ]]; then
-    git clone --depth 1 "$repo_fzf" $dir_fzf
+    git clone --depth 1 -q "$repo_fzf" $dir_fzf
     echo
-    $dir_fzf/install --all --no-zsh --no-fish
+    $dir_fzf/install --all --no-zsh --no-fish >/dev/null
     printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
   fi
   echo
@@ -291,6 +291,6 @@ source "$file_profile"
 source "$file_gitprompt"
 
 # Clean up
-unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt machine_name url_git_ssh_keys user_email user_name yn file_tmp_delta dir_tmp_delta
+unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt machine_name url_git_ssh_keys user_email user_name yn file_tmp_delta dir_tmp_delta dir_delta_install
 
 printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"
