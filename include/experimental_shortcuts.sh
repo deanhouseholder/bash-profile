@@ -78,7 +78,7 @@ e() {
   # Exit the function if the file is not found
   if [[ ! -f "$1" ]]; then
     printf "\n\e[31mERROR: Couldn't find file to extract.\e[0m\n"
-    kill -INT $$
+    return 1
   fi
   local filename=$(basename $1)
   local dir=$(pwd)
@@ -93,7 +93,7 @@ e() {
     read -sn 1 p
     if [[ ! $p =~ [yY] ]]; then
       printf "\nCancelled\n"
-      kill -INT $$
+      return 1
     fi
     echo
   fi
@@ -110,13 +110,13 @@ e() {
     *.bz2)      ext=".bz2";      cmd="bunzip2";     options="";      usepv=1;;
     *.gz)       ext=".gz";       cmd="gunzip";      options="";      usepv=1;;
     *.zip)      ext=".zip";      cmd="unzip";       options="";      usepv=1;;
-    *)          printf "\e[31mError: Cannot determine how to extract '$1'\e[0m\n" && kill -INT $$;;
+    *)          printf "\e[31mError: Cannot determine how to extract '$1'\e[0m\n" && return 1;;
   esac
 
   printf "\e[32mExtracting $filename\e[0m\n"
 
   # Check if extraction command is installed/executable
-  [[ -x "$(type -fP fzf)" ]] || printf "\e[31mError: $cmd is not installed\e[0m\n" && kill -INT $$
+  [[ -x "$(type -fP fzf)" ]] || printf "\e[31mError: $cmd is not installed\e[0m\n" && return 1
 
   # Check if pv is enabled and installed
   if [[ $usepv -eq 1 ]] && [[ -x "$(type -fP pv)" ]]; then
