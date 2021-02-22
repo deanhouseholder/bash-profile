@@ -2,6 +2,9 @@
 # setprofile.sh
 # Description: This script will install Dean Householder's bash prompt
 # URL: https://github.com/deanhouseholder/bash-profile
+#
+# TODO: Detect system architecture and download appropriate version of Delta (mostly for Mac)
+#
 
 # Define variables
 dir_bin=~/bin
@@ -41,6 +44,7 @@ chmod 700 $dir_code
 # $2 = [optional] default value if user presses Enter (Either "Y" or "N")
 # $3 = [optional] variable name to capture (default is $yn)
 # Set variable ($yn or $2) is always uppercase "Y" or "N"
+unset prompt_yn
 prompt_yn() {
   local prompt default out_varname passed   # Define local vars
   [[ -z "$1" ]] || printf "$1"              # If prompt is set, display it
@@ -204,17 +208,25 @@ if [[ $yn == Y ]]; then
         rm "$file_tmp_delta"
         rm -rf "$dir_tmp_delta"
         if [[ -x "$dir_delta_install/delta" ]]; then
+          git config --global core.pager "delta --file-style=box --minus-color=#820005 --minus-emph-color=#a90008 --plus-color=#15600b --plus-emph-color=#218815 --theme=1337"
+          git config --global delta.features "side-by-side line-numbers decorations"
+          git config --global delta.whitespace-error-style "22 reverse"
+          git config --global delta.decorations.commit-decoration-style "bold yellow box ul"
+          git config --global delta.decorations.file-style "bold yellow ul"
+          git config --global delta.decorations.file-decoration-style "none"
+          git config --global interactive.difffilter "delta --color-only"
           printf "Delta was installed successfully.\n\n"
+        else
+          printf "Failed to install delta\n\n"
         fi
       else
         printf "Failed to download delta\n\n"
-        delta_failed=1
       fi
     fi
   fi
 
-  # Prompt to configure delta configs
-  if [[ $yn == N ]] || [[ $delta_failed == 1 ]]; then
+  # Prompt to configure delta configs if delta is installed and configs are not present
+  if [[ -x "$dir_delta_install/delta" ]]; then
     if [[ "$(git config --global core.pager | grep delta | wc -l)" == "0" ]]; then
       prompt_yn "Would you like to install git delta configs? [Y/n] " Y
       if [[ $yn == Y ]]; then
