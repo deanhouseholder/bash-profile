@@ -150,7 +150,7 @@ function docker_remove_all_images() {
 }
 
 # Run a shell in the specified Docker container (try bash first)
-docker_shell() {
+function docker_shell() {
   docker_ready
   if [[ $# -ne 1 ]]; then
     echo "Usage: dsh [CONTAINER_ID/CONTAINER_NAME]" && return 1
@@ -167,7 +167,7 @@ docker_shell() {
 }
 
 # Start a docker image by name
-docker_start_image_by_name() {
+function docker_start_image_by_name() {
   if [[ $# -lt 1 ]]; then
     echo "Usage dstart [IMAGENAME]" && return 1
   fi
@@ -217,7 +217,7 @@ docker_start_image_by_name() {
 # Docker build and start
 # Usage: dbs tag-name [path]
 # [path] assumes current directory
-docker_build_and_start() {
+function docker_build_and_start() {
   if [[ $# -lt 1 ]]; then
     echo "Usage dbs TAGNAME [DIRNAME]" && return 1
   fi
@@ -233,7 +233,7 @@ docker_build_and_start() {
 }
 
 # Docker-compose build with optional tagging
-docker_compose_build_and_maybe_tag() {
+function docker_compose_build_and_maybe_tag() {
   if [[ $# -lt 1 ]]; then
     echo "Usage dcbt DIRNAME [TAGNAME ...]" && return 1
   fi
@@ -246,26 +246,26 @@ docker_compose_build_and_maybe_tag() {
 }
 
 # Get the Docker containers' locally-mapped port by name
-docker_get_local_listening_port_by_container_name() {
+function docker_get_local_listening_port_by_container_name() {
   docker inspect -f '{{.NetworkSettings.Ports}}' "$1" | sed -r -e 's/.* ([0-9]+)}.*/\1/'
 }
 
 # Get the Docker containers' internal service port number by name
-docker_get_internal_service_port_from_container_by_name() {
+function docker_get_internal_service_port_from_container_by_name() {
   docker inspect -f '{{.ContainerConfig.ExposedPorts}}' $(docker images -q "$1") | sed -r -e 's/.*\[([0-9]+)\/.*/\1/'
 }
 
 # Get a docker image id (or list of id's) by name (wildcards allowed)
-docker_get_image_id_by_name() {
+function docker_get_image_id_by_name() {
   docker images -q "$1"
 }
 
 # Get a single docker container id by name
-docker_get_container_id_by_name() {
+function docker_get_container_id_by_name() {
   docker ps -aqf "name=$1"
 }
 
 # Get container id of currently running container name
-docker_get_running_continer_id_by_name() {
+function docker_get_running_continer_id_by_name() {
   docker ps -qf "name=$1"
 }

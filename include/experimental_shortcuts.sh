@@ -12,7 +12,7 @@
 #       'logs'='/var/log/apache2'
 #       'apache'='/etc/apache2/sites-available'
 #     )
-cd(){
+function cd(){
   if [[ "$#" == "0" ]]; then
     pushd $HOME 1>/dev/null
   elif [[ -f "$1" ]]; then
@@ -42,7 +42,7 @@ cd(){
 alias cdlist='printf "\nList of cd aliases:\n\n" && printf "%s\n" ${cd_array[@]} | column -t -s= && echo'
 
 # Add a "back directory" function to change back (with popd) any number of directories
-bd(){
+function bd(){
   if [[ -z "$1" ]]; then
     popd &>/dev/null
   else
@@ -74,7 +74,7 @@ cat(){
 
 
 ## Extract function with progress bars where possible
-e() {
+function e() {
   # Exit the function if the file is not found
   if [[ ! -f "$1" ]]; then
     printf "\n\e[31mERROR: Couldn't find file to extract.\e[0m\n"
@@ -141,33 +141,3 @@ e() {
   fi
   printf "\nDone\n\n"
 }
-
-## Display Alias Menu
-# $1 - path to a markdown file with a table to be displayed in the terminal
-display_alias_menu() {
-
-  repeat_string() {
-    printf "%0.s$1" $(seq $2)
-  }
-
-  # Get Aliases from .md file passed in
-  local OUT="$(cat $1 | grep -E '^\|')"
-  local FIRST_LINE="$(echo "$OUT" | head -n1)"
-  local LENGTH=$((${#FIRST_LINE}+2))
-  local PADDING=$((($LENGTH / 2) - 10))
-  local BAR="$(repeat_string '-' $LENGTH)"
-
-  local HELP="$(echo "$OUT" | awk '{
-    gsub("^\\| ([a-z\\[\\]][^ ]*)", "| \033[36m"$2"\033[37m");
-    gsub("\\| Alias Name", "| \033[1;37mAlias Name\033[0;37m");
-    gsub("\\| Description", "| \033[1;37mDescription\033[0;37m");
-    gsub("\\|", " | ");
-    print $0
-  }')"
-
-  printf "\n$(repeat_string ' ' $PADDING)${HEADER}$2$N\n"
-  printf " +%s+\n%s\n +%s+\n\n" "$BAR" "$HELP" "$BAR"
-}
-
-# Convert all mp3 files in the current directory to 64kbps versions and associate the first .jpg image as their cover art
-mp3_64(){ local i; for i in *.mp3; do lame --preset cbr 64 --ti $(ls *.jpg | head -n1) $i ${i%.mp3}-64.mp3; done; }

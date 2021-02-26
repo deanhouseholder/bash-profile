@@ -1,6 +1,55 @@
 # Start of apt-specific functions
 if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
 
+  # fzf start service(s)
+  function start() {
+    printf "Generating list of stopped running services\r"
+    service --status-all 2>&1 | grep '\[ \- \]' | awk '{print $4}' \
+    | fzf --tac -0 -m --prompt="Choose service(s) to start: " \
+    | while read service; do
+        printf "Starting $service\e[K\n"
+        sudo service $service start
+      done
+    printf "\e[K"
+  }
+
+  # fzf stop service(s)
+  function stop() {
+    printf "Generating list of running services\r"
+    service --status-all 2>&1 | grep '+' | awk '{print $4}' \
+    | fzf --tac -0 -m --prompt="Choose service(s) to stop: " \
+    | while read service; do
+        printf "Stopping $service\e[K\n"
+        sudo service $service stop
+      done
+    printf "\e[K"
+  }
+
+  # fzf restart service(s)
+  function restart() {
+      printf "Generating list of services\r"
+      service --status-all 2>&1 | awk '{print $4}' \
+      | fzf --tac -0 -m --prompt="Choose service(s) to restart: " \
+      | while read service; do
+          printf "Restarting $service\e[K\n"
+          sudo service $service restart
+        done
+    printf "\e[K"
+  }
+
+  # fzf check the status of service(s)
+  function status() {
+    printf "Generating list of running services\r"
+    service --status-all 2>&1 | grep '+' | awk '{print $4}' \
+    | fzf --tac -0 -m --prompt="Choose service(s) to see the status: " \
+    | while read service; do
+        printf "\e[K\n=====================================\n\nDisplaying status for $service\n\n"
+        sudo service $service status
+      done
+     printf "\e[K"
+  }
+
+
   # Check dependencies: fzf and column
   if [[ -x "$(type -fP fzf)" ]] && [[ -x "$(type -fP column)" ]]; then
 
@@ -10,7 +59,7 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
 
 
     # Display apt packages available for update and prompt user to selectively select for install
-    apt_fuzzy_upgrade() {
+    function apt_fuzzy_upgrade() {
       # Check for apt updates
       sudo apt update
 
@@ -23,7 +72,7 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
 
     # Allow user to interactively select packages to be installed based on input
     # TODO: allow for a parameter that switches modes from "contains" to "starts-with" to "exact"
-    apt_fuzzy_install() {
+    function apt_fuzzy_install() {
       # Check input
       if [[ -z "$1" ]]; then
         printf "Error: No package to search the apt package repo was specified.\n\nUSAGE: afi [package_name]\n"
@@ -42,7 +91,7 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
     }
 
 
-    apt_fuzzy_uninstall() {
+    function apt_fuzzy_uninstall() {
       # Check dependencies
       [[ -x "$(type -fP fzf)"    ]] || { printf "fzf is required but not installed.\n";   return 1; }
       [[ -x "$(type -fP column)" ]] || { printf "column is required but not installed\n"; return 1; }
