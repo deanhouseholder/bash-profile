@@ -1,29 +1,21 @@
 ## Apache
 alias apache='cd /etc/apache2/sites-available/ && ls *-ssl.conf'
 alias logs='cd /var/log/apache2/ && ls'
-alias rp='chown -R www-data:www-data .'
+alias rp='sudo chown -R www-data:www-data .' # Reset permissions
+alias ra='sudo service apache2 restart'
+alias rla='sudo service apache2 reload'
 
 ## Composer
 alias c='composer'
 alias ci='c install'
 alias cu='c update'
 alias cr='c require'
-alias cc='c clear-cache;c dump-autoload;if [[ -f artisan ]];then a clear-compiled;a optimize:clear;a cache:clear;a config:clear;a route:clear;a view:clear;elif [[ -f bin/console ]]; then bc cache:clear;bc cache:warmup;fi;'
+alias cc='c clear-cache;c dump-autoload;if [[ -f artisan ]];then a clear-compiled;a optimize:clear;a cache:clear;a config:clear;a route:clear;a view:clear;fi;'
 
 ## Laravel
 alias a='php artisan'
 alias routes='a route:list'
-alias newproject='np(){ c create-project --prefer-dist laravel/laravel .; }; np'
-
-## Symfony
-#alias bc='bin/console --ansi'
-#alias rt='bc debug:router'
-#alias aw='bc debug:autowiring'
-#alias cdc='bc debug:container'
-#alias dcfg='bc debug:config'
-#alias dcfgf='bc debug:config framework'
-#alias cdump='bc config:dump'
-#alias cdumpf='bc config:dump framework'
+alias newproject='c create-project --prefer-dist laravel/laravel .'
 
 ## NPM
 alias n='npm'
