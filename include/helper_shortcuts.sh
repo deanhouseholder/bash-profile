@@ -22,6 +22,17 @@ alias up9='cd ../../../../../../../../..'
 alias up10='cd ../../../../../../../../../..'
 alias ut='cd /'
 
+# Empty/not-empty functions. Usage:
+# empty "$var" && set_var
+# not_empty && clear_var
+function empty()[[ -z "$1" ]]
+function not_empty()[[ ! -z "$1" ]]
+
+# Check if a file is of a given type
+function is_binary()[[ "$(file -b --mime-encoding "$1")" == "binary" ]]
+function is_ascii()[[ "$(file -b --mime-encoding "$1")" =~ "ascii" ]]
+function is_utf8(){ iconv -f UTF-8 "$1" -t UTF-8 -o /dev/null; }
+
 # Time command/script in hours/mins/secs
 function time_cmd() {
   local time_start=$(date +%s%N)
@@ -54,11 +65,8 @@ function calc() {
   awk "BEGIN{print $*}"
 }
 
-# Return 1 for a number and 0 otherwise
-function is_num() { if [[ "$1" =~ [0-9]+ ]]; then echo 1; else echo 0; fi; }
-
-# Returns 0 for binary and 1 for text
-function is_binary(){ grep -m1 '^' $1 | grep -q '^Binary'; }
+# Return 0 for a number and 1 otherwise
+function is_num()[[ "$1" =~ [0-9]+ ]]
 
 # Set the window title to function arguments
 function change_title(){ test -z "$1" && printf "No title passed to function\n" || printf '\033]2;%s\007' "$(echo $@)"; }

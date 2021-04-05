@@ -3,7 +3,7 @@
 # $2 = (optional) File pattern (ex: *.js) (default is: *)
 # $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
 # Bug: Backslashes are not displaying in results. (ex: "\n" shows up as "n")
-search(){
+function search(){
   # Define Vars
   local sep=$'\x01' # Obscure ascii character not likely to appear in files
   local col_spacing=3
