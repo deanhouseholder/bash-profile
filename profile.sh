@@ -11,10 +11,23 @@ if [[ $- =~ i ]]; then
 
   # Set defaults
   export TERM='xterm-256color'
-  export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
-  profile_sh_path="$BASH_SOURCE"
-  profile_sh_dir="${profile_sh_path%/profile.sh}"
   bash_on_windows=0
+
+  # Determine if GNU or BSD style of ls command
+  if [[ $(ls --color &>/dev/null) ]]; then
+    export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
+  else
+    export LS_OPTIONS='-GF'
+  fi
+
+  # Determine paths
+  if [[ "$BASH_SOURCE" =~ / ]]; then
+    profile_sh_path="$BASH_SOURCE"
+    profile_sh_dir="${profile_sh_path%/profile.sh}"
+  else
+    profile_sh_path="$PWD/$BASH_SOURCE"
+    profile_sh_dir="$PWD"
+  fi
 
   ## Detect Environment and set vars
   os_ver="$(cat /proc/version 2>/dev/null)"

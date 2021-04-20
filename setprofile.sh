@@ -28,6 +28,12 @@ repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
 repo_fzf="https://github.com/junegunn/fzf.git"
 repo_delta="https://api.github.com/repos/dandavison/delta/releases/latest"
 
+if [[ "$(uname)" == "Darwin" ]]; then
+  bash_env='mac'
+else
+  bash_env='linux'
+fi
+
 # Start install script
 printf "\nStarting configuration of bash profile\n"
 
@@ -199,7 +205,12 @@ if [[ $yn == Y ]]; then
   if [[ ! -x "$dir_delta_install/delta" ]]; then
     prompt_yn "\nDo you want to install 'delta' for better git diff's? [Y/n] " Y
     if [[ $yn == Y ]]; then
-      curl -s "$repo_delta" | grep -Ei '_url.*-x86_64-unknown-linux-gnu.tar.gz' | cut -d\" -f4 | wget -qi - -O "$file_tmp_delta"
+      if [[ $bash_env == "mac" ]]; then
+        delta_grep='_url.*-x86_64-apple-darwin.tar.gz'
+      else
+        delta_grep='_url.*-x86_64-unknown-linux-gnu.tar.gz'
+      fi
+      curl -s "$repo_delta" | grep -Ei $delta_grep | cut -d\" -f4 | wget -qi - -O "$file_tmp_delta"
       if [[ -f "$file_tmp_delta" ]]; then
         mkdir "$dir_tmp_delta"
         tar zxf "$file_tmp_delta" -C "$dir_tmp_delta" --strip-components=1
