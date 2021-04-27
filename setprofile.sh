@@ -175,7 +175,7 @@ if [[ $yn == Y ]]; then
     prompt_yn "Would you like to update your Git colors/options configuration? [Y/n] " Y
     if [[ "$yn" == Y ]]; then
         git config --global core.whitespace "fix,-indent-with-non-tab,trailing-space,cr-at-eol"
-        git config --global format.pretty "%C(178)%h%Creset %C(110)%cd%Creset %C(85)%d %C(15)%s"
+        git config --global format.pretty "| %C(178)%h%Creset | %C(110)%<(14)%ar%Creset | %C(85)%<(16)%an%Creset | %<(120,trunc)%s |"
         git config --global color.branch "auto"
         git config --global color.interactive "auto"
         git config --global color.diff "auto"
