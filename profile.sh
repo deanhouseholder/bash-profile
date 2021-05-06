@@ -14,7 +14,8 @@ if [[ $- =~ i ]]; then
   bash_on_windows=0
 
   # Determine if GNU or BSD style of ls command
-  if [[ $(ls --color &>/dev/null) ]]; then
+  ls --color &>/dev/null
+  if [[ $? ]]; then
     export LS_OPTIONS='--color=auto -F --time-style=posix-long-iso'
   else
     export LS_OPTIONS='-GF'
