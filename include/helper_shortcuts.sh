@@ -69,7 +69,7 @@ function calc() {
 function is_num()[[ "$1" =~ [0-9]+ ]]
 
 # Set the window title to function arguments
-function change_title(){ test -z "$1" && printf "No title passed to function\n" || printf '\033]2;%s\007' "$(echo $@)"; }
+function change_title(){ test -z "$1" && printf "No title passed to function\n" || printf '\033]0;%s\007' "$(echo $@)"; }
 
 # Find a file or directory through parent directories
 function find_up(){ local p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; echo "$p"; }
