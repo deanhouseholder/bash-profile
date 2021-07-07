@@ -142,11 +142,6 @@ else
 fi
 echo
 
-# Add auto loading of new profile.sh script in .bash_profile if it isn't there
-if [[ -z "$(grep "source $file_profile" $file_startup 2>/dev/null)" ]]; then
-  printf "\n# Include the bash profile\nsource $file_profile\n" >> $file_startup
-fi
-
 # Configure Git
 prompt_yn "Do plan to use Git? [Y/n] " Y
 echo
@@ -307,6 +302,11 @@ if [[ $? -ne 0 ]]; then
     printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
   fi
   echo
+fi
+
+# Add auto loading of new profile.sh script in .bash_profile if it isn't there
+if [[ -z "$(grep "source $file_profile" $file_startup 2>/dev/null)" ]]; then
+  printf "\n# Include the bash profile\nsource $file_profile\n" >> $file_startup
 fi
 
 # Load new profile script
