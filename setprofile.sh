@@ -45,6 +45,8 @@ chmod 700 $dir_ssh
 mkdir -p $dir_code
 chmod 700 $dir_code
 
+touch "$file_startup"
+
 # Prompt for Y or N
 # $1 = [optional] prompt to display
 # $2 = [optional] default value if user presses Enter (Either "Y" or "N")
@@ -271,7 +273,7 @@ if [[ $yn == Y ]]; then
       fi
     fi
 
-    # Add auto-loading of gitprompt in .bashrc if it isn't there
+    # Add auto-loading of gitprompt in .bash_profile if it isn't there
     if [[ -z "$(grep "source $file_gitprompt" $file_startup)" ]]; then
       printf "\n# Include the Git Prompt functions\nsource $file_gitprompt\n\n" >> $file_startup
     fi
