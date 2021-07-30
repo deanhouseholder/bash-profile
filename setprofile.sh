@@ -284,7 +284,7 @@ if [[ $yn == Y ]]; then
       read machine_name
       if [[ ! -z "$machine_name" ]]; then
         echo "$machine_name" > "$file_displayname"
-        printf "\nalias set_title=\"change_title $(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
+        printf "\nalias set_title=\"change_title \$(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
       else
         hostname > "$file_displayname"
       fi
