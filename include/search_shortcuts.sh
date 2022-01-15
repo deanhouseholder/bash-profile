@@ -16,6 +16,7 @@ function search(){
   local filter_swap_separators="s/^([^:]*):([^:]+):\s*(.*)$/\2$sep\1$sep\3/g"
   local col_line_w=0 # Column containing the line number's max width
   local col_path_w=0 # Column containing the file path's max width
+  local fixed_strings='--fixed-strings '
   local search name case_sensitive find_array col_line col_path col_data error message usage
 
   # Check for missing input
@@ -36,28 +37,35 @@ function search(){
 
   # Process user input
   search="$1"
-  test -z "$2" && name='*' || name="$2"
-  test "$3" == '1' && case_sensitive='i'
+  [[ -z "$2" ]] && name='*' || name="$2"
+  [[ "$name" == "*." ]] && name='*'
+  [[ "$3" == '1' ]] && case_sensitive='i'
 
   # Escape any semicolons in search input for safety with grep
-  local escaped_search="$(printf "%s" "$search" | sed -e 's/;/\\;/g')"
+  local escaped_search="$(printf -- "%s" "$search" | sed -e 's/;/\;/g')"
+  if [[ "$search" == ';' ]]; then # Special case if search is just a semicolon
+    fixed_strings=''
+    escaped_search='\;'
+  fi
 
   # To avoid difficulty allowing all search characters without sed confusing them for regex characters,
   # convert search input to hex characters where replace is simple.
-  local search_hex="$(printf "%s" "$search" | xxd -p)" # Convert search into hex
+  local search_hex="$(printf -- "%s" "$search" | xxd -p -c 1000000)" # Convert search into hex
   local replace_hex="$start_red_hex$search_hex$stop_red_hex"  # Build replacement string in hex
 
-  # Run find command and capture the results into an array
+  # Perform search and capture the results into an array
   mapfile find_array < <( \
-    find . -type f -name "$name" -exec grep -${case_sensitive}nH --fixed-strings "$escaped_search" {} \; \
-    | grep -v '^Binary' | uniq | sed -r -e "$filter_swap_separators" \
+    find . -type f -name "$name" -exec grep -${case_sensitive}nH --color=never $fixed_strings -- "$escaped_search" {} \; \
+      | grep -v -- '^Binary' | uniq | sed -r -e "$filter_swap_separators" \
   )
 
-  # loop through the first time to determine max column widths
+  # loop through the first time to determine max column widths and total count
+  local count=0
   while read line; do
     while IFS="$sep" read -r col_line col_path col_data; do
-      if [[ $col_line_w -lt ${#col_line} ]]; then col_line_w=${#col_line}; fi
-      if [[ $col_path_w -lt ${#col_path} ]]; then col_path_w=${#col_path}; fi
+      [[ ! -z "$col_data" ]] && let count++
+      [[ $col_line_w -lt ${#col_line} ]] && col_line_w=${#col_line}
+      [[ $col_path_w -lt ${#col_path} ]] && col_path_w=${#col_path}
     done < <(echo "${line[@]}")
   done < <(echo "${find_array[@]}")
 
@@ -68,18 +76,25 @@ function search(){
   fi
   let col_path_w+=$col_spacing
 
-  # Print heading
-  printf "\n${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "Line" "File Path" "Search Results"
-  printf   "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "----" "---------" "---------------"
+  if [[ $count -eq 0 ]]; then
+    printf "\nNo matches found\n\n"
+  else
+    # Print heading
+    printf "\n${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "Line" "File Path" "Search Results"
+    printf   "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "----" "---------" "---------------"
 
-  # Loop through again to display output in columns
-  while read line; do
-    while IFS="$sep" read -r col_line col_path col_data; do
-      # Add color to search string in results (Do search/replace in hex mode and then swap back)
-      col_data="$(printf "%s" "$col_data" | xxd -p | sed "s/$search_hex/$replace_hex/g" | xxd -p -r)"
-      printf "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "${col_data//^\w/}"
-    done < <(echo "${line[@]}")
-  done < <(echo "${find_array[@]}")
+    # Loop through again to display output in columns
+    while read line; do
+      while IFS="$sep" read -r col_line col_path col_data; do
+        if [[ ! -z "$col_data" ]]; then
+          # Add color to search string in results (Do search/replace in hex mode and then swap back)
+          col_data="$(printf -- "%s" "$col_data" | xxd -p -c 1000000 | sed -- "s/$search_hex/$replace_hex/g" | xxd -p -r)"
+          printf -- "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "${col_data//^\w/}"
+        fi
+      done < <(echo "${line[@]}")
+    done < <(echo "${find_array[@]}")
+    printf "\nMatches found: $count\n\n"
+  fi
 }
 
 function se(){    search "$1" "*.$2";    } # Search shortcut which puts in the *. prefix to a filetype for you
