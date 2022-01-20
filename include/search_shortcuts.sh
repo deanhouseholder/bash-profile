@@ -97,15 +97,11 @@ function search(){
   fi
 }
 
-function se(){    search "$1" "*.$2";    } # Search shortcut which puts in the *. prefix to a filetype for you
-function si(){    search "$1" "*.$2";    } # Case-insensitive shortcut function
-function sai(){   search "$1" '*' 1;     } # Search all files case-insensitive
-function sphp(){  search "$1" '*.php';   } # Search PHP files
-function sphpi(){ search "$1" '*.php' 1; } # Search PHP files case-insensitive
-function scss(){  search "$1" '*.css';   } # Search CSS files
-function scssi(){ search "$1" '*.css' 1; } # Search CSS files case-insensitive
-function sjs(){   search "$1" '*.js';    } # Search JavaScript files
-function sjsi(){  search "$1" '*.js' 1;  } # Search JavaScript files case-insensitive
+function se(){    search "$1" "*.$2" $3;  } # Search shortcut which puts in the *. prefix to a filetype for you
+function si(){    search "$1" "*.$2" 1;   } # Case-insensitive shortcut function
+function sphp(){  search "$1" '*.php' $2; } # Search PHP files
+function scss(){  search "$1" '*.css' $2; } # Search CSS files
+function sjs(){   search "$1" '*.js' $2;  } # Search JavaScript files
 
 # Search for a count of matches within each file
 function searchcount(){
