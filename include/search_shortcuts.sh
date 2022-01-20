@@ -2,6 +2,7 @@
 # $1 = Search string
 # $2 = (optional) File pattern (ex: *.js) (default is: *)
 # $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
+# $4 = (optional) Comma-separated list of directories to ignore (format is: ".git,vendor,tmp")
 # Bug: Backslashes are not displaying in results. (ex: "\n" shows up as "n")
 function search(){
   # Define Vars
@@ -19,18 +20,28 @@ function search(){
   local fixed_strings='--fixed-strings '
   local search name case_sensitive find_array col_line col_path col_data error message usage
 
+  # Ignore certain binary filetypes to speed up searching
+  local filetypes_to_ignore=(class gif gpg gz jar jpeg jpg jrb pgp pgp_ png pp pyc 'so.*' tar zip)
+
   # Check for missing input
   if [[ -z "$1" ]]; then
     error="${bold}\e[37m\e[41m"
     message="${bold}\e[36m"
-    usage="\n${bold}Recursive File Search${end}\n\n"
-    usage="${usage}${error}Error: %s${end}\n\n${message}Usage:\n${end}"
-    usage="${usage}search \"SEARCH_STRING\"                    (Search all files for case-sensitive matching)\n"
-    usage="${usage}search \"SEARCH_STRING\" \"FILE_PATTERN\"     (For case-sensitive matching)\n"
-    usage="${usage}search \"SEARCH_STRING\" \"FILE_PATTERN\" 1   (For case-insensitive matching)\n\n"
-    usage="${usage}${message}Examples:${end}\n"
-    usage="${usage}search \"undefined\" '*.js' 1\n"
-    usage="${usage}search 'Fatal Error:' '*.log'\n\n"
+    local usage="\n${bold}Recursive File Search${end}\n\n"
+    usage+="${error}Error: %s${end}\n\n${message}Usage:\n${end}"
+    usage+="search SEARCH_PATTERN [FILE_PATTERN] [CASE_INSENSITIVE] [IGNORE_DIRS]\n\n"
+
+    usage+="${message}Parameters:${end}\n"
+    usage+="SEARCH_PATTERN       The string to be matched\n"
+    usage+="FILE_PATTERN         File matching pattern such as '*.php'\n"
+    usage+="CASE_INSENSITIVE     0 for case-sensitive search (default), 1 for case-insensitive\n"
+    usage+="IGNORE_DIRS          Comma-separated list of directories to ignore\n\n"
+
+    usage+="${message}Examples:${end}\n"
+    usage+="search '.ajax' '*.js' 1\n"
+    usage+="search 'Fatal Error:' '*.log'\n"
+    usage+="search '<div class=\"d-flex\">' '*' 0 '.git,bin,vendor'\n\n"
+
     printf "$usage" "No search string given"
     return 1
   fi
@@ -39,7 +50,25 @@ function search(){
   search="$1"
   [[ -z "$2" ]] && name='*' || name="$2"
   [[ "$name" == "*." ]] && name='*'
-  [[ "$3" == '1' ]] && case_sensitive='i'
+  [[ "$3" == "1" ]] && case_sensitive='i'
+
+  # Build out switches to ignore directories
+  if [[ ! -z "$4" ]]; then
+    IFS=',' read -r -a paths_to_ignore <<< "$4"
+
+    # Expand out the array of paths to match this syntax:
+    # -path "*/tmp*" -prune -o -path "*/.git*" -prune -o -path "*/app*" -prune -o
+    local ignore_paths=""
+    for path in ${paths_to_ignore[@]}; do
+      ignore_paths+=" -path \"*/${path}/*\" -prune -o"
+    done
+  fi
+
+  # Expand out the array of filetypes
+  local ignore_filetypes=""
+  for filetype in ${filetypes_to_ignore[@]}; do
+    ignore_filetypes+=" -name '*.${filetype}' -prune -o"
+  done
 
   # Escape any semicolons in search input for safety with grep
   local escaped_search="$(printf -- "%s" "$search" | sed -e 's/;/\;/g')"
@@ -55,8 +84,8 @@ function search(){
 
   # Perform search and capture the results into an array
   mapfile find_array < <( \
-    find . -type f -name "$name" -exec grep -${case_sensitive}nH --color=never $fixed_strings -- "$escaped_search" {} \; \
-      | grep -v -- '^Binary' | uniq | sed -r -e "$filter_swap_separators" \
+    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} \; \
+      | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
   )
 
   # loop through the first time to determine max column widths and total count
@@ -97,11 +126,11 @@ function search(){
   fi
 }
 
-function se(){    search "$1" "*.$2" $3;  } # Search shortcut which puts in the *. prefix to a filetype for you
-function si(){    search "$1" "*.$2" 1;   } # Case-insensitive shortcut function
-function sphp(){  search "$1" '*.php' $2; } # Search PHP files
-function scss(){  search "$1" '*.css' $2; } # Search CSS files
-function sjs(){   search "$1" '*.js' $2;  } # Search JavaScript files
+function se(){    search "$1" "*.$2" 0 "$3";   } # Search shortcut which puts in the *. prefix to a filetype for you
+function si(){    search "$1" "*.$2" 1 "$3";   } # Case-insensitive shortcut function
+function sphp(){  search "$1" '*.php' $2 "$3"; } # Search PHP files
+function scss(){  search "$1" '*.css' $2 "$3"; } # Search CSS files
+function sjs(){   search "$1" '*.js' $2 "$3";  } # Search JavaScript files
 
 # Search for a count of matches within each file
 function searchcount(){
