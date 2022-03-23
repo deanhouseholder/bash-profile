@@ -55,89 +55,108 @@ function bd(){
 
 # Intelligent replacement for the cat command
 cat(){
-  if [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then  # If passed with -A then use regular cat
+  if [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then                   # If passed with -A then use regular cat
     command cat "$@"
-  elif [[ -d "$1" ]]; then           # Directory
+  elif [[ -d "$1" ]]; then                                                # Directory provided, so show a list of the files
     ls -l "$1"
   elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ -x "$(type -fP jq)" ]]; then  # If .json file then send through JQ (if installed)
     command cat "$@" | jq
   elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ -x "$(type -fP glow)" ]]; then  # If .md file then view with glow (if installed)
     glow "$@"
-  elif [[ "$1" =~ ^\>.*$ ]]; then    # If concatenating multiple files use regular cat
+  elif [[ "$1" =~ ^\>.*$ ]]; then                                         # If concatenating multiple files use regular cat
     command cat "$@"
-  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP ccat)" ]]; then  # If ccat is installed use ccat
+  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP batcat)" ]]; then             # If batcat is installed, use it
+    batcat "$1"
+  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP ccat)" ]]; then               # If ccat is installed, use it with alternate colors
     ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white "$@"
-  else                               # Else use regular cat
+  else                                                                    # Else use regular cat
     command cat "$@"
   fi
 }
 
 
 ## Extract function with progress bars where possible
-function e() {
+e() {
   # Exit the function if the file is not found
   if [[ ! -f "$1" ]]; then
     printf "\n\e[31mERROR: Couldn't find file to extract.\e[0m\n"
     return 1
   fi
-  local filename=$(basename $1)
-  local dir=$(pwd)
+  local filepath="$1"
+  local filename="$(basename $1)"
+  local dir="$(pwd)"
 
-  printf "Extract $filename into $dir\n\n"
+  case "$1" in
+    *.7z)       ext=".7z";       cmd="7z";          options="x";      usepv=0;;
+    *.tar.bz2)  ext=".tar.bz2";  cmd="tar";         options="-jxvf";  usepv=0;;
+    *.tbz2)     ext=".tbz2";     cmd="tar";         options="-jxvf";  usepv=0;;
+    *.tar.gz)   ext=".tar.gz";   cmd="tar";         options="-zxvf";  usepv=0;;
+    *.tgz)      ext=".tgz";      cmd="tar";         options="-zxvf";  usepv=0;;
+    *.tar)      ext=".tar";      cmd="tar";         options="-xvf";   usepv=0;;
+    *.rar)      ext=".rar";      cmd="unrar";       options="x";      usepv=0;;
+    *.Z)        ext=".Z";        cmd="uncompress";  options="";       usepv=0;;
+    *.bz2)      ext=".bz2";      cmd="bunzip2";     options="";       usepv=1;;
+    *.gz)       ext=".gz";       cmd="gunzip";      options="";       usepv=1;;
+    *.zip)      ext=".zip";      cmd="unzip";       options="";       usepv=1;;
+    *)          printf "\e[31mError: Cannot determine how to extract '$1'\e[0m\n" && return 2;;
+  esac
+
+  local filename_without_ext="${filename%$ext}"
+  printf "\nExtract \e[36m$filename\e[0m into \e[36m$dir\e[0m\n\n"
 
   local count=$(\ls | wc -l | awk '{print $1}')
   if [[ $count -ne 0 ]]; then
-    printf "\e[33mWARNING: The current directory is not empty!\n\n"
-    printf "There are currently [$count] items in this directory.\e[0m\n\n"
-    printf "Would you like to proceed anyway? [y/N]\n"
-    read -sn 1 p
-    if [[ ! $p =~ [yY] ]]; then
-      printf "\nCancelled\n"
-      return 1
+    printf "\e[33mWARNING: The current directory is not empty!\e[0m\n\n"
+    printf "Would you like to:\n1. Proceed anyway\n2. Extract to a subdirectory called '$filename_without_ext'\nC. Cancel\n"
+    read -sn 1 prompt
+    if [[ ! $prompt =~ [12] ]]; then
+      printf "\nCancelled\n\n"
+      return 3
+    elif [[ $prompt == 2 ]]; then
+      # Check if new dir exists
+      if [[ -d "$filename_without_ext" ]]; then
+        printf "\n\e[33mWARNING: The directory '$filename_without_ext' already exists!\e[0m\n\nCancelling\n\n"
+        return 4
+      fi
+
+      # If using tar, use --one-top-level to create the new dir and prevent nested dirs with the same name
+      if [[ $cmd == "tar" ]]; then
+        options="--one-top-level $options"
+      else
+        # Make a new dir
+        mkdir "$filename_without_ext"
+        cd "$filename_without_ext"
+        filepath="../$filepath"
+      fi
     fi
-    echo
   fi
 
-  case "$1" in
-    *.7z)       ext=".7z";       cmd="7z";          options="x";     usepv=0;;
-    *.tar.bz2)  ext=".tar.bz2";  cmd="tar";         options="jxvf";  usepv=0;;
-    *.tbz2)     ext=".tbz2";     cmd="tar";         options="jxvf";  usepv=0;;
-    *.tar.gz)   ext=".tar.gz";   cmd="tar";         options="zxvf";  usepv=0;;
-    *.tgz)      ext=".tgz";      cmd="tar";         options="zxvf";  usepv=0;;
-    *.tar)      ext=".tar";      cmd="tar";         options="xvf";   usepv=0;;
-    *.rar)      ext=".rar";      cmd="unrar";       options="x";     usepv=0;;
-    *.Z)        ext=".Z";        cmd="uncompress";  options="";      usepv=0;;
-    *.bz2)      ext=".bz2";      cmd="bunzip2";     options="";      usepv=1;;
-    *.gz)       ext=".gz";       cmd="gunzip";      options="";      usepv=1;;
-    *.zip)      ext=".zip";      cmd="unzip";       options="";      usepv=1;;
-    *)          printf "\e[31mError: Cannot determine how to extract '$1'\e[0m\n" && return 1;;
-  esac
-
-  printf "\e[32mExtracting $filename\e[0m\n"
+  printf "\n\e[32mExtracting $filename\e[0m\n\n"
 
   # Check if extraction command is installed/executable
-  [[ -x "$(type -fP fzf)" ]] || printf "\e[31mError: $cmd is not installed\e[0m\n" && return 1
+  [[ -x "$(type -fP fzf)" ]] || ( printf "\e[31mError: $cmd is not installed\e[0m\n" && return 5 )
 
   # Check if pv is enabled and installed
   if [[ $usepv -eq 1 ]] && [[ -x "$(type -fP pv)" ]]; then
-    filesize=$(stat -c '%s' "$1")
-    newfile="${1%%$ext}"
+    filesize=$(stat -c '%s' "$filepath")
+    newfile="$filename_without_ext"
 
     # Handle special case for .zip since unzip command doesn't allow piping and funzip doesn't allow multiple files
     if [[ $ext == ".zip" ]]; then
       # If the .zip contains 1 file and if funzip and pv are installed we can show a progress bar
-      if [[ $(zipinfo -t "$1" | awk '{print $1}') -eq 1 ]] && [[ -x "$(type -fP funzip)" ]]; then
-        cat "$1" | pv -s $filesize -i 0.1 -D 0 | funzip > "$newfile"
+      if [[ $(zipinfo -t "$filepath" | awk '{print $filepath}') -eq 1 ]] && [[ -x "$(type -fP funzip)" ]]; then
+        cat "$filepath" | pv -s $filesize -i 0.1 -D 0 | funzip > "$newfile"
       else
-        unzip "$1"
+        unzip "$filepath"
       fi
     else
       # Use pv command to show progress bars
-      cat "$1" | pv -s $filesize -i 0.1 -D 0 | $cmd $options > $newfile
+      cat "$filepath" | pv -s $filesize -i 0.1 -D 0 | $cmd $options > $newfile
     fi
   else
     # Run command
-    $cmd $options "$1"
+    $cmd $options "$filepath"
   fi
+  cd "$dir"
   printf "\nDone\n\n"
 }
