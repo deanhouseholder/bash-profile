@@ -84,7 +84,7 @@ function search(){
 
   # Perform search and capture the results into an array
   mapfile find_array < <( \
-    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} \; \
+    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} + \
       | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
   )
 
