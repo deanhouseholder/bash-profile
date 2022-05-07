@@ -86,7 +86,7 @@ function search(){
   if [[ -x "$(type -fP parallel)" ]]; then
     # Use 'parallel' command to speed up searching
     mapfile find_array < <( \
-      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' | parallel --will-cite -k -j250% -n 1000 -m grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} \
+      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' | parallel --will-cite -k -j250% -n 1000 -m grep -${case_sensitive}nH --color=never $fixed_strings -- '\"$escaped_search\"' {} \
         | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
     )
   else
