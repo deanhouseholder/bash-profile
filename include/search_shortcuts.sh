@@ -83,10 +83,19 @@ function search(){
   local replace_hex="$start_red_hex$search_hex$stop_red_hex"  # Build replacement string in hex
 
   # Perform search and capture the results into an array
-  mapfile find_array < <( \
-    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} + \
-      | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
-  )
+  if [[ -x "$(type -fP parallel)" ]]; then
+    # Use 'parallel' command to speed up searching
+    mapfile find_array < <( \
+      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' | parallel --will-cite -k -j250% -n 1000 -m grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} \
+        | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
+    )
+  else
+    # Default to regular grep
+    mapfile find_array < <( \
+      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} + \
+        | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
+    )
+  fi
 
   # loop through the first time to determine max column widths and total count
   local count=0
