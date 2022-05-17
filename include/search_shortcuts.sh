@@ -1,8 +1,8 @@
 # Recursive File Contents Search function
 # $1 = Search string
 # $2 = (optional) File pattern (ex: *.js) (default is: *)
-# $3 = (optional) Set to 1 for case-insensitive search (default is: case-sensitive)
-# $4 = (optional) Comma-separated list of directories to ignore (format is: ".git,vendor,tmp")
+# $3 = (optional) Set to 1 for case-insensitive search (default is: 0 (case-sensitive))
+# $4 = (optional) Comma-separated list of directories to ignore (format is: ".git,vendor,node_modules,bin")
 # Bug: Backslashes are not displaying in results. (ex: "\n" shows up as "n")
 function search(){
   # Define Vars
@@ -18,16 +18,16 @@ function search(){
   local col_line_w=0 # Column containing the line number's max width
   local col_path_w=0 # Column containing the file path's max width
   local fixed_strings='--fixed-strings '
-  local search name case_sensitive find_array col_line col_path col_data error message usage
+  local search name case_sensitive find_array col_line col_path col_data error message usage filetypes_to_ignore escaped_search search_hex replace_hex ignore_paths count ignore_filetypes
 
   # Ignore certain binary filetypes to speed up searching
-  local filetypes_to_ignore=(class gif gpg gz jar jpeg jpg jrb pgp pgp_ png pp pyc 'so.*' tar zip)
+  filetypes_to_ignore=(class gif gpg gz jar jpeg jpg jrb pgp pgp_ png pp pyc 'so.*' tar zip)
 
   # Check for missing input
   if [[ -z "$1" ]]; then
     error="${bold}\e[37m\e[41m"
     message="${bold}\e[36m"
-    local usage="\n${bold}Recursive File Search${end}\n\n"
+    usage="\n${bold}Recursive File Search${end}\n\n"
     usage+="${error}Error: %s${end}\n\n${message}Usage:\n${end}"
     usage+="search SEARCH_PATTERN [FILE_PATTERN] [CASE_INSENSITIVE] [IGNORE_DIRS]\n\n"
 
@@ -40,9 +40,9 @@ function search(){
     usage+="${message}Examples:${end}\n"
     usage+="search '.ajax' '*.js' 1\n"
     usage+="search 'Fatal Error:' '*.log'\n"
-    usage+="search '<div class=\"d-flex\">' '*' 0 '.git,bin,vendor'\n\n"
+    usage+="search '<div class=\"d-flex\">' '*' 0 '.git,vendor,node_modules,bin'\n\n"
 
-    printf "$usage" "No search string given"
+    printf "${usage}" "No search string given"
     return 1
   fi
 
@@ -53,102 +53,104 @@ function search(){
   [[ "$3" == "1" ]] && case_sensitive='i'
 
   # Build out switches to ignore directories
-  if [[ ! -z "$4" ]]; then
+  if [[ -n "$4" ]]; then
     IFS=',' read -r -a paths_to_ignore <<< "$4"
 
     # Expand out the array of paths to match this syntax:
-    # -path "*/tmp*" -prune -o -path "*/.git*" -prune -o -path "*/app*" -prune -o
-    local ignore_paths=""
-    for path in ${paths_to_ignore[@]}; do
-      ignore_paths+=" -path \"*/${path}/*\" -prune -o"
+    # \( -path "*/tmp/*" -o -path "*/.git/*" \) -prune -o
+    ignore_paths='\('
+    for path in "${paths_to_ignore[@]}"; do
+      ignore_paths+=" -path \"*/${path}/*\" -o"
     done
+    ignore_paths="${ignore_paths:0:-2}" # Trim off the last '-o'
+    ignore_paths+='\) -prune -o'
   fi
 
-  # Expand out the array of filetypes
-  local ignore_filetypes=""
-  for filetype in ${filetypes_to_ignore[@]}; do
-    ignore_filetypes+=" -name '*.${filetype}' -prune -o"
+  # Expand out the array of filetypes to ignore to match this syntax:
+  # \( -name '*.gif' -o -name '*.png' \) -prune -o
+  ignore_filetypes='\('
+  for filetype in "${filetypes_to_ignore[@]}"; do
+    ignore_filetypes+=" -name '*.${filetype}' -o"
   done
+  ignore_filetypes="${ignore_filetypes:0:-2}" # Trim off the last '-o'
+  ignore_filetypes+='\) -prune -o'
 
-  # Escape any semicolons in search input for safety with grep
-  local escaped_search="$(printf -- "%s" "$search" | sed -e 's/;/\;/g')"
-  if [[ "$search" == ';' ]]; then # Special case if search is just a semicolon
+  # Escape any special characters in search input for safety with grep
+  escaped_search="$(printf -- '%s' "$search" | sed -e 's/\"/\\"/g' -e 's/`/\\`/g')"
+
+  # Handle special case if search is just a semicolon
+  if [[ "$search" == ';' ]]; then
     fixed_strings=''
     escaped_search='\;'
   fi
 
   # To avoid difficulty allowing all search characters without sed confusing them for regex characters,
   # convert search input to hex characters where replace is simple.
-  local search_hex="$(printf -- "%s" "$search" | xxd -p -c 1000000)" # Convert search into hex
-  local replace_hex="$start_red_hex$search_hex$stop_red_hex"  # Build replacement string in hex
+  search_hex="$(printf -- "%s" "$search" | xxd -p -c 1000000)" # Convert search into hex
+  replace_hex="$start_red_hex$search_hex$stop_red_hex"  # Build replacement string in hex
 
   # Perform search and capture the results into an array
-  if [[ -x "$(type -fP parallel)" ]]; then
-    # Use 'parallel' command to speed up searching
-    mapfile find_array < <( \
-      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' | parallel --will-cite -k -j250% -n 1000 -m grep -${case_sensitive}nH --color=never $fixed_strings -- '\"$escaped_search\"' {} \
-        | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
-    )
-  else
-    # Default to regular grep
-    mapfile find_array < <( \
-      eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec grep -${case_sensitive}nH --color=never $fixed_strings -- '$escaped_search' {} + \
-        | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
-    )
-  fi
+  mapfile find_array < <( \
+    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec \
+      grep -${case_sensitive}nH --color=never $fixed_strings -- \"$escaped_search\" {} + \
+      | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
+  )
 
-  # loop through the first time to determine max column widths and total count
-  local count=0
-  while read line; do
+  # Loop through the first time to determine max column widths and total count
+  count=0
+  while read -r line; do
     while IFS="$sep" read -r col_line col_path col_data; do
-      [[ ! -z "$col_data" ]] && let count++
+      [[ -n "$col_data" ]] && ((count ++))
       [[ $col_line_w -lt ${#col_line} ]] && col_line_w=${#col_line}
       [[ $col_path_w -lt ${#col_path} ]] && col_path_w=${#col_path}
     done < <(echo "${line[@]}")
   done < <(echo "${find_array[@]}")
 
-  # Add some padding
-  let col_line_w+=$col_spacing
-  if [[ $col_line_w -lt $((4 + $col_spacing)) ]]; then
-    col_line_w=$((4 + $col_spacing)) # Because the heading "Line" is 4 chars, make it at least that long
-  fi
-  let col_path_w+=$col_spacing
-
+  # Begin display results
   if [[ $count -eq 0 ]]; then
     printf "\nNo matches found\n\n"
   else
+    # Add some padding
+    ((col_line_w += col_spacing))
+    if [[ $col_line_w -lt $((col_spacing + 4)) ]]; then
+      col_line_w=$((col_spacing + 4)) # Because the heading "Line" is 4 chars, make it at least that long
+    fi
+    ((col_path_w += col_spacing))
+
     # Print heading
     printf "\n${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "Line" "File Path" "Search Results"
-    printf   "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "----" "---------" "---------------"
+    printf   "${bold}%-${col_line_w}s%-${col_path_w}s%s${end}\n" "----" "---------" "--------------"
 
     # Loop through again to display output in columns
-    while read line; do
+    while read -r line; do
       while IFS="$sep" read -r col_line col_path col_data; do
-        if [[ ! -z "$col_data" ]]; then
+        if [[ -n "$col_data" ]]; then
           # Add color to search string in results (Do search/replace in hex mode and then swap back)
           col_data="$(printf -- "%s" "$col_data" | xxd -p -c 1000000 | sed -- "s/$search_hex/$replace_hex/g" | xxd -p -r)"
           printf -- "${green}%-${col_line_w}s$end${purple}%-${col_path_w}s$end%s\n" "$col_line" "$col_path" "${col_data//^\w/}"
         fi
       done < <(echo "${line[@]}")
     done < <(echo "${find_array[@]}")
-    printf "\nMatches found: $count\n\n"
+    printf "\nMatches found: %s\n\n" "$count"
   fi
 }
 
-function se(){    search "$1" "*.$2" 0 "$3";   } # Search shortcut which puts in the *. prefix to a filetype for you
-function si(){    search "$1" "*.$2" 1 "$3";   } # Case-insensitive shortcut function
-function sphp(){  search "$1" '*.php' $2 "$3"; } # Search PHP files
-function scss(){  search "$1" '*.css' $2 "$3"; } # Search CSS files
-function sjs(){   search "$1" '*.js' $2 "$3";  } # Search JavaScript files
+function se(){    search "$1" '*.'"$2"  0    "$3"; } # Search shortcut which puts in the *. prefix to a filetype for you
+function si(){    search "$1" '*.'"$2"  1    "$3"; } # Case-insensitive shortcut function
+function sphp(){  search "$1" '*.php'   "$2" "$3"; } # Search PHP files
+function scss(){  search "$1" '*.css'   "$2" "$3"; } # Search CSS files
+function sjs(){   search "$1" '*.js'    "$2" "$3"; } # Search JavaScript files
 
 # Search for a count of matches within each file
 function searchcount(){
-  local matches="$(command grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
+  local matches
+  matches="$(command grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
   printf "Matches\tFilename\n-----\t--------------------------------\n%s\n" "$matches" | column -t
 }
 
 # Search for a count of case-insensitive matches within each file
 function searchcounti(){
-  local matches="$(command grep -RHni "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
+  local matches
+  matches="$(command grep -RHni "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
   printf "Matches\tFilename\n-----\t--------------------------------\n%s\n" "$matches" | column -t
 }
