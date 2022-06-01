@@ -102,3 +102,9 @@ function cheat() {
   fi
   curl cheat.sh/$(echo $@ | tr ' ' /)
 }
+
+# Reverse DNS Lookup
+function rdns() {
+  dig +short -x $1
+}
+
