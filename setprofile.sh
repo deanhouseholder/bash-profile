@@ -3,8 +3,6 @@
 # Description: This script will install Dean Householder's bash prompt
 # URL: https://github.com/deanhouseholder/bash-profile
 #
-# TODO: Detect system architecture and download appropriate version of Delta (mostly for Mac)
-#
 
 # Define variables
 dir_bin=~/bin
@@ -27,15 +25,39 @@ repo_bash_profile="https://github.com/deanhouseholder/bash-profile.git"
 repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
 repo_fzf="https://github.com/junegunn/fzf.git"
 repo_delta="https://api.github.com/repos/dandavison/delta/releases/latest"
+error=0
+novim=0
+apps_to_install=()
 
+# Start install script
+printf "\nStarting configuration of bash profile\n"
+
+# Dependency Checks
+function check_dependency() {
+  which $1 &>/dev/null
+  if [[ $? -ne 0 ]]; then
+    error=1
+    apps_to_install=(${apps_to_install[@]} $1)
+  fi
+}
+check_dependency curl
+check_dependency wget
+check_dependency tar
+check_dependency vim
+check_dependency git
+if [[ $error == 1 ]]; then
+  printf "\nError: Missing Dependencies\nPlease install the following apps before continuing:"
+  printf " %s" "${apps_to_install[@]}"
+  printf "\n\n"
+  return 1
+fi
+
+# Check for Mac
 if [[ "$(uname)" == "Darwin" ]]; then
   bash_env='mac'
 else
   bash_env='linux'
 fi
-
-# Start install script
-printf "\nStarting configuration of bash profile\n"
 
 # Set up directories
 mkdir -p $dir_bin
@@ -150,11 +172,6 @@ echo
 
 # User confirmed they want to configure Git
 if [[ $yn == Y ]]; then
-
-  if [[ -z "$(which git 2>&1 | grep -v 'no git')" ]]; then
-    printf "Git is not installed! Please install then re-run $0\n\n"
-    return
-  fi
 
   # Configure git settings
   if [[ -z "$(git config --global user.name)" ]]; then
