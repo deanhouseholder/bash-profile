@@ -90,10 +90,12 @@ function search(){
   replace_hex="$start_red_hex$search_hex$stop_red_hex"  # Build replacement string in hex
 
   # Perform search and capture the results into an array
+  # Match all paths except for ones that start with '..' (captures '.abc' and '..abc' as files/dirs)
+  # Searching this way gets rid of the leading './'
   mapfile find_array < <( \
-    eval "find . $ignore_paths $ignore_filetypes -type f -name '$name' -exec \
+    eval "find * .[^.]* ..?* $ignore_paths $ignore_filetypes -type f -name '$name' -exec \
       grep -${case_sensitive}nH --color=never $fixed_strings -- \"$escaped_search\" {} + \
-      | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
+      2>/dev/null | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
   )
 
   # Loop through the first time to determine max column widths and total count
@@ -144,13 +146,13 @@ function sjs(){   search "$1" '*.js'    "$2" "$3"; } # Search JavaScript files
 # Search for a count of matches within each file
 function searchcount(){
   local matches
-  matches="$(command grep -RHn "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
+  matches="$(command grep -RHn "$1" 2>/dev/null | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
   printf "Matches\tFilename\n-----\t--------------------------------\n%s\n" "$matches" | column -t
 }
 
 # Search for a count of case-insensitive matches within each file
 function searchcounti(){
   local matches
-  matches="$(command grep -RHni "$1" | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
+  matches="$(command grep -RHni "$1" 2>/dev/null | grep -v '^Binary' | cut -d: -f1 | uniq -c)"
   printf "Matches\tFilename\n-----\t--------------------------------\n%s\n" "$matches" | column -t
 }
