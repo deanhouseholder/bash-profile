@@ -1,5 +1,5 @@
 # Recursive File Contents Search function
-# $1 = Search string
+# $1 = Search string (or -i to see list of ignored filetypes)
 # $2 = (optional) File pattern (ex: *.js) (default is: *)
 # $3 = (optional) Set to 1 for case-insensitive search (default is: 0 (case-sensitive))
 # $4 = (optional) Comma-separated list of directories to ignore (format is: ".git,vendor,node_modules,bin")
@@ -21,7 +21,7 @@ function search(){
   local search name case_sensitive find_array col_line col_path col_data error message usage filetypes_to_ignore escaped_search search_hex replace_hex ignore_paths count ignore_filetypes
 
   # Ignore certain binary filetypes to speed up searching
-  filetypes_to_ignore=(class gif gpg gz jar jpeg jpg jrb pgp pgp_ png pp pyc 'so.*' tar zip)
+  filetypes_to_ignore=(3gp 7z aac apng avi avif bmp class dll doc docx exe flac gif gpg gz gzip ico iso jar jfif jpeg jpg jrb mdb mkv mov mp3 mp4 mpeg odt ogg pdf pgp pgp_ png pp ppt pptx pyc rar 'so.*' sqlite svg tar tar tif tiff vob wav webm webp wma wmv xls xlsx zip)
 
   # Check for missing input
   if [[ -z "$1" ]]; then
@@ -40,9 +40,20 @@ function search(){
     usage+="${message}Examples:${end}\n"
     usage+="search '.ajax' '*.js' 1\n"
     usage+="search 'Fatal Error:' '*.log'\n"
-    usage+="search '<div class=\"d-flex\">' '*' 0 '.git,vendor,node_modules,bin'\n\n"
+    usage+="search '<div class=\"cart\">' '*' 0 '.git,vendor,node_modules,bin'\n\n"
+
+    usage+="${message}Note:${end}\n"
+    usage+="You can also pass in '-i' as the first parameter to see a list of ignored filetypes.\n\n"
 
     printf "${usage}" "No search string given"
+    return 1
+  fi
+
+  # If user passes '-i' as the first parameter, show a list of the ignored filetypes
+  if [[ "$1" == '-i' ]]; then
+    printf "Filetypes that are ignored:\n"
+    out="$(printf ".%s, " "${filetypes_to_ignore[@]}")"
+    printf "%s\n\n" "${out:0:-2}"
     return 1
   fi
 
