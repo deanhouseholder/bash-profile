@@ -66,7 +66,7 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
       # Get list of packages, pass to fzf, update selected
       sudo apt list --upgradable 2>/dev/null | sed '1d' | \
         sed -E -e 's/^([^\/]+)\/[^0-9]*([0-9\.\-]+)[^\[]*\[[^0-9]*([^\+]+).*$/\1@\3@➤@\2/g' | column -t -s@ | \
-        fzf --tac -m -0 | sed -E -e 's/^([^ ]+).*/\1/g' | sudo xargs apt install -y
+        fzf --tac -m -0 | awk '{print $1'} | sudo xargs apt install -y
     }
 
 
@@ -83,11 +83,12 @@ if [[ -x "$(type -fP apt)" ]]; then   # Only load if apt is present
       sudo apt update
 
       # Search apt for packages matching input, display with fuzzy finder with full preview, install selected
-      sudo apt search $1 2>/dev/null | sed '1,2d' | egrep '^([^ ].*)$' | \
+      sudo apt search $1 2>/dev/null | sed '1,2d' | grep -E '^([^ ].*)$' | \
         sed -E -e 's/([^/]+)\/.* (\[[a-z,\])/\1@\2/g' -e 's/([^/]+)\/.*/\1/g' | column -t -s@ | \
         fzf -0 -m --tac --preview="echo {} | awk '{print \$1}' | xargs apt-cache show --no-all-versions |
         sed -E -e 's/^Description-en: (.*)$/\fDescription: \1\n/' -e 's/^Description-md5.*/\f/' |
-        awk 'BEGIN{RS=\"\f\"}/Description/{print}' | sed -E -e 's/^\W*\.$//g' -e 's/^\W*(.*)$/\1/g'" | sudo xargs apt install -y
+        awk 'BEGIN{RS=\"\f\"}/Description/{print}' | sed -E -e 's/^\W*\.$//g' -e 's/^\W*(.*)$/\1/g'" | \
+        awk '{print $1'} | sudo xargs apt install -y
     }
 
 
