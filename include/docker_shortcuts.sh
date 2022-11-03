@@ -175,9 +175,9 @@ function docker_start_image_by_name() {
 
   # Check to see if a container by this name is/was previously running
   local container_id=$(docker_get_container_id_by_name "$1")
-  if [[ ! -z "$container_id" ]]; then
+  if [[ -n "$container_id" ]]; then
     local running_container_id=$(docker_get_running_continer_id_by_name "$1")
-    if [[ ! -z "$running_container_id" ]]; then
+    if [[ -n "$running_container_id" ]]; then
       printf "\nThe docker container $1 is already running.\n"
       local local_port=$(docker_get_local_listening_port_by_container_name "$1")
       printf "\nYou can access it via: http://localhost:$local_port/\n\n"

@@ -12,15 +12,14 @@
 #       'logs'='/var/log/apache2'
 #       'apache'='/etc/apache2/sites-available'
 #     )
-function cd(){
-  if [[ "$#" == "0" ]]; then
+function cd() {
+  if [[ $# -eq 0 ]]; then # If no options passed in cd to $HOME
     pushd $HOME 1>/dev/null
-  elif [[ -f "$1" ]]; then
-    $EDITOR "$1"
-  elif [[ "$1" =~ ^\-+$ ]]; then
-    # support multiple dashes and go back through dir stack for each one
+  elif [[ -f "$1" ]]; then # If a file is passed in, edit it in default $EDITOR otherwise use nano
+    [[ -n "$EDITOR" ]] && $EDITOR "$1" || nano "$1"
+  elif [[ "$1" =~ ^\-+$ ]]; then # If input is any number of dashes go back through dir stack for each one
     bd ${#1} 1>/dev/null
-  elif [[ -d "$1" ]]; then
+  elif [[ -d "$1" ]]; then # If a dir is passed in, cd into it and add it to the dir stack
     pushd "$1" 1>/dev/null
   else
     # If an array called $cd_array is defined, loop through it and check for shortcuts
@@ -30,7 +29,7 @@ function cd(){
       path=$(echo "$i" | cut -d= -f2)
       test "$1" == "$keyword" && local newdir="$path" && break
     done
-    if [[ ! -z "$newdir" ]]; then
+    if [[ -n "$newdir" ]]; then
       pushd "$newdir" 1>/dev/null
     else
       printf "cd $1: No such file or directory\n"
@@ -38,11 +37,12 @@ function cd(){
   fi
 }
 # Display a list of cd aliases
-# TODO: enhance with fzf
 alias cdlist='printf "\nList of cd aliases:\n\n" && printf "%s\n" ${cd_array[@]} | column -t -s= && echo'
+# Display interactive list of cd aliases if fzf is installed
+alias cdi='[[ -x $(type -fP fzf) ]] && cd "$(( cdlist ) | sed '1,3d' | fzf --tac -0 | awk '\''{print $2}'\'')" || echo fzf is not installed'
 
 # Add a "back directory" function to change back (with popd) any number of directories
-function bd(){
+function bd() {
   if [[ -z "$1" ]]; then
     popd &>/dev/null
   else
@@ -54,21 +54,21 @@ function bd(){
 
 
 # Intelligent replacement for the cat command
-cat(){
-  if [[ "$1" =~ \ -[beEnstTuv]*A[beEnstTuv]*\  ]]; then                   # If passed with -A then use regular cat
+function cat() {
+  if [[ ! -t 1 ]]; then                                                   # If output is a pipe/redirect use cat (checks if stdout is not a terminal)
+    command cat "$@"
+  elif [[ "$*" =~ -[beEnstTuv]*A[beEnstTuv]* ]]; then                 # If passed with -A then use regular cat
     command cat "$@"
   elif [[ -d "$1" ]]; then                                                # Directory provided, so show a list of the files
-    ls -l "$1"
+    ls -l "$@"
   elif [[ "${@: -1}" =~ ^.*\.json$ ]] && [[ -x "$(type -fP jq)" ]]; then  # If .json file then send through JQ (if installed)
     command cat "$@" | jq
   elif [[ "${@: -1}" =~ ^.*\.md$ ]] && [[ -x "$(type -fP glow)" ]]; then  # If .md file then view with glow (if installed)
     glow "$@"
-  elif [[ "$1" =~ ^\>.*$ ]]; then                                         # If concatenating multiple files use regular cat
-    command cat "$@"
-  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP batcat)" ]]; then             # If batcat is installed, use it
-    batcat "$1"
-  elif [[ ! -z "$1" ]] && [[ -x "$(type -fP ccat)" ]]; then               # If ccat is installed, use it with alternate colors
-    ccat --bg=dark -G String=darkgreen -G Keyword=darkred -G Plaintext=white -G Plaintext=white -G Type=purple -G Literal=yellow -G Comment=purple -G Punctuation=white -G Tag=blue -G HTMLTag=darkgreen -G Decimal=white "$@"
+  elif [[ -n "$1" ]] && [[ -x "$(type -fP batcat)" ]]; then             # If batcat is installed, use it
+    batcat "$@"
+  elif [[ -n "$1" ]] && [[ -x "$(type -fP ccat)" ]]; then               # If ccat is installed, use it with better colors
+    ccat --bg=dark -G String=yellow -G Keyword=darkred -G Comment=faint -G Type=darkgreen -G Literal=yellow -G Punctuation=lightgray -G Plaintext=lightgray -G Tag=blue -G HTMLTag=darkgreen -G Decimal=purple "$@"
   else                                                                    # Else use regular cat
     command cat "$@"
   fi
@@ -76,7 +76,7 @@ cat(){
 
 
 ## Extract function with progress bars where possible
-e() {
+function e() {
   # Exit the function if the file is not found
   if [[ ! -f "$1" ]]; then
     printf "\n\e[31mERROR: Couldn't find file to extract.\e[0m\n"

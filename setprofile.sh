@@ -93,14 +93,14 @@ prompt_yn() {
     fi
 
     # Check if Enter was pressed -- check for default $2 passed in
-    if [[ -z "$prompt" ]] && [[ ! -z "$default" ]]; then
+    if [[ -z "$prompt" ]] && [[ -n "$default" ]]; then
       prompt=$default
       passed=1
     fi
 
     # Valid input was entered, now assign it
     if [[ $passed -eq 1 ]]; then
-      if [[ ! -z "$out_varname" ]]; then    # If user passed in a custom var name
+      if [[ -n "$out_varname" ]]; then    # If user passed in a custom var name
         eval "$out_varname=$prompt"         # Set custom var name to the prompt value
       else
         yn=$prompt                          # Set a public variable to the value
@@ -299,7 +299,7 @@ if [[ $yn == Y ]]; then
     if [[ ! -f "$file_displayname" ]]; then
       printf "\nWhat display name would you use for this machine (used in the title and prompt)?\n"
       read machine_name
-      if [[ ! -z "$machine_name" ]]; then
+      if [[ -n "$machine_name" ]]; then
         echo "$machine_name" > "$file_displayname"
         printf "\nalias set_title=\"change_title \$(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
       else

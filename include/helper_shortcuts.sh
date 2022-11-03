@@ -26,7 +26,7 @@ alias ut='cd /'
 # empty "$var" && set_var
 # not_empty && clear_var
 function empty()[[ -z "$1" ]]
-function not_empty()[[ ! -z "$1" ]]
+function not_empty()[[ -n "$1" ]]
 
 # Check if a file is of a given type
 function is_binary()[[ "$(file -b --mime-encoding "$1")" == "binary" ]]
