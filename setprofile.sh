@@ -21,6 +21,8 @@ file_gitprompt="$dir_gitprompt/default-prompt.sh"
 file_displayname=~/.displayname
 file_tmp_delta="/tmp/delta.tgz"
 url_git_ssh_keys="https://raw.githubusercontent.com/deanhouseholder/ssh-keys/master/ssh-keys.sh"
+url_git_bash_profile="https://github.com/deanhouseholder/bash-profile/archive/refs/heads/master.zip"
+url_git_fzf="https://github.com/junegunn/fzf/archive/refs/heads/master.zip"
 repo_bash_profile="https://github.com/deanhouseholder/bash-profile.git"
 repo_gitprompt="https://github.com/deanhouseholder/gitprompt.git"
 repo_fzf="https://github.com/junegunn/fzf.git"
@@ -41,16 +43,20 @@ function check_dependency() {
   fi
 }
 check_dependency curl
-check_dependency wget
 check_dependency tar
+check_dependency unzip
 check_dependency vim
-check_dependency git
+check_dependency wget
 if [[ $error == 1 ]]; then
   printf "\nError: Missing Dependencies\nPlease install the following apps before continuing:"
   printf " %s" "${apps_to_install[@]}"
   printf "\n\n"
   return 1
 fi
+
+# Check if git is installed
+which git >/dev/null 2>&1
+git_installed=$?
 
 # Check for Mac
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -141,98 +147,131 @@ if [[ ! -s ~/.vimrc ]]; then
   printf "syntax on\nset nu\nset tabstop=4\n" > ~/.vimrc
 fi
 
-# Check if bash-prompt is already installed, and if there are updates, prompt to update
+# Check if bash-profile is already installed, and if there are updates, prompt to update
 if [[ -f "$file_profile" ]]; then
-  cd "$dir_bash_profile"
-  if [[ "$(git fetch -q; git status | grep 'Your branch is behind' | wc -l)" -eq 1 ]]; then
-    # Update bash-profile
-    prompt_yn "Do want to update bash-profile to the latest version? [Y/n] " Y
-    if [[ $yn == Y ]]; then
-      git pull -q
-      echo "Updated"
+  if [[ $git_installed -eq 0 ]]; then
+    cd "$dir_bash_profile"
+    if [[ "$(git fetch -q; git status | grep 'Your branch is behind' | wc -l)" -eq 1 ]]; then
+      # Update bash-profile
+      prompt_yn "Do want to update bash-profile to the latest version? [Y/n] " Y
+      if [[ $yn == Y ]]; then
+        git pull -q
+        echo "Updated"
+      else
+        echo "Skipped"
+      fi
     else
-      echo "Skipped"
+      echo "Your bash-profile is up-to-date."
     fi
-  else
-    echo "Your bash-profile is up-to-date."
+    cd - >/dev/null
   fi
-  cd - >/dev/null
 else
-  mkdir -p "$dir_bash_profile"
-  cd "$dir_bash_profile"
-  git clone -q "$repo_bash_profile" .
-  cd - >/dev/null
-  echo "Installed"
+  if [[ $git_installed -eq 0 ]]; then
+    mkdir -p "$dir_bash_profile"
+    git clone -q "$repo_bash_profile" "$dir_bash_profile"
+    echo "Installed via git"
+  else
+    cd "$dir_code"
+    wget -q "$url_git_bash_profile" -O master.zip >/dev/null
+    unzip -q master.zip
+    mv bash-profile-master "$dir_bash_profile"
+    rm master.zip
+    cd - >/dev/null
+    echo "Installed via zip"
+  fi
 fi
 echo
 
 # Configure Git
-prompt_yn "Do plan to use Git? [Y/n] " Y
+prompt_yn "Do you want to configure Git? [Y/n] " Y
 echo
-
-# User confirmed they want to configure Git
 if [[ $yn == Y ]]; then
 
-  # Configure git settings
-  if [[ -z "$(git config --global user.name)" ]]; then
-    read -p "What name would you like to use for git commits? (typically your full name) " user_name
-    git config --global user.name "$user_name"
-    echo
-  fi
-  if [[ -z "$(git config --global user.email)" ]]; then
-    read -p "What email address would you like to use for git commits? " user_email
-    git config --global user.email "$user_email"
-    echo
-  fi
+  # User confirmed they want to configure Git. Confirm git is installed
+  if which git >/dev/null; then
 
-  if [[ "$(git config --global format.pretty | grep '%C(178)%h%Creset %C(110)%cd%Creset %C(85)%d %C(15)%s' | wc -l)" == "0" ]]; then
-    prompt_yn "Would you like to update your Git colors/options configuration? [Y/n] " Y
-    if [[ "$yn" == Y ]]; then
-        git config --global core.whitespace "fix,-indent-with-non-tab,trailing-space,cr-at-eol"
-        git config --global format.pretty "| %C(178)%h%Creset | %C(110)%<(14)%ar%Creset | %C(85)%<(16)%an%Creset | %<(120,trunc)%s |"
-        git config --global color.branch "auto"
-        git config --global color.interactive "auto"
-        git config --global color.diff "auto"
-        git config --global color.status "auto"
-        git config --global color.ui "auto"
-        git config --global color.branch.current "reverse 40"
-        git config --global color.branch.local "40"
-        git config --global color.branch.remote "166"
-        git config --global color.diff.meta "116"
-        git config --global color.diff.frag "15"
-        git config --global color.diff.old "196"
-        git config --global color.diff.new "76"
-        git config --global color.status.added "40"
-        git config --global color.status.changed "166"
-        git config --global color.status.untracked "50"
-        git config --global color.decorate.branch "40"
-        git config --global color.decorate.remoteBranch "80"
-        git config --global color.decorate.tag "166"
-        git config --global color.decorate.stash "40"
-        git config --global color.decorate.HEAD "50"
-        git config --global push.default "simple"
+    # Configure git settings
+    if [[ -z "$(git config --global user.name)" ]]; then
+      read -p "What name would you like to use for git commits? (typically your full name) " user_name
+      git config --global user.name "$user_name"
+      echo
     fi
-    echo
-  fi
+    if [[ -z "$(git config --global user.email)" ]]; then
+      read -p "What email address would you like to use for git commits? " user_email
+      git config --global user.email "$user_email"
+      echo
+    fi
 
-  # Prompt to install delta if not installed
-  if [[ ! -x "$dir_delta_install/delta" ]]; then
-    prompt_yn "\nDo you want to install 'delta' for better git diff's? [Y/n] " Y
-    if [[ $yn == Y ]]; then
-      if [[ $bash_env == "mac" ]]; then
-        delta_grep='_url.*-x86_64-apple-darwin.tar.gz'
-      else
-        delta_grep='_url.*-x86_64-unknown-linux-gnu.tar.gz'
+    if [[ "$(git config --global format.pretty | grep '%C(178)%h%Creset %C(110)%cd%Creset %C(85)%d %C(15)%s' | wc -l)" == "0" ]]; then
+      prompt_yn "Would you like to update your Git colors/options configuration? [Y/n] " Y
+      if [[ "$yn" == Y ]]; then
+          git config --global core.whitespace "fix,-indent-with-non-tab,trailing-space,cr-at-eol"
+          git config --global format.pretty "| %C(178)%h%Creset | %C(110)%<(14)%ar%Creset | %C(85)%<(16)%an%Creset | %<(120,trunc)%s |"
+          git config --global color.branch "auto"
+          git config --global color.interactive "auto"
+          git config --global color.diff "auto"
+          git config --global color.status "auto"
+          git config --global color.ui "auto"
+          git config --global color.branch.current "reverse 40"
+          git config --global color.branch.local "40"
+          git config --global color.branch.remote "166"
+          git config --global color.diff.meta "116"
+          git config --global color.diff.frag "15"
+          git config --global color.diff.old "196"
+          git config --global color.diff.new "76"
+          git config --global color.status.added "40"
+          git config --global color.status.changed "166"
+          git config --global color.status.untracked "50"
+          git config --global color.decorate.branch "40"
+          git config --global color.decorate.remoteBranch "80"
+          git config --global color.decorate.tag "166"
+          git config --global color.decorate.stash "40"
+          git config --global color.decorate.HEAD "50"
+          git config --global push.default "simple"
       fi
-      curl -s "$repo_delta" | grep -Ei $delta_grep | cut -d\" -f4 | wget -qi - -O "$file_tmp_delta"
-      if [[ -f "$file_tmp_delta" ]]; then
-        mkdir "$dir_tmp_delta"
-        tar zxf "$file_tmp_delta" -C "$dir_tmp_delta" --strip-components=1
-        cp "$dir_tmp_delta"/delta "$dir_delta_install/"
-        cp "$dir_tmp_delta/README.md" "$dir_delta_install/delta-readme.md"
-        rm "$file_tmp_delta"
-        rm -rf "$dir_tmp_delta"
-        if [[ -x "$dir_delta_install/delta" ]]; then
+      echo
+    fi
+
+    # Prompt to install delta if not installed
+    if [[ ! -x "$dir_delta_install/delta" ]]; then
+      prompt_yn "\nDo you want to install 'delta' for better git diff's? [Y/n] " Y
+      if [[ $yn == Y ]]; then
+        if [[ $bash_env == "mac" ]]; then
+          delta_grep='_url.*-x86_64-apple-darwin.tar.gz'
+        else
+          delta_grep='_url.*-x86_64-unknown-linux-gnu.tar.gz'
+        fi
+        curl -s "$repo_delta" | grep -Ei $delta_grep | cut -d\" -f4 | wget -qi - -O "$file_tmp_delta"
+        if [[ -f "$file_tmp_delta" ]]; then
+          mkdir "$dir_tmp_delta"
+          tar zxf "$file_tmp_delta" -C "$dir_tmp_delta" --strip-components=1
+          cp "$dir_tmp_delta"/delta "$dir_delta_install/"
+          cp "$dir_tmp_delta/README.md" "$dir_delta_install/delta-readme.md"
+          rm "$file_tmp_delta"
+          rm -rf "$dir_tmp_delta"
+          if [[ -x "$dir_delta_install/delta" ]]; then
+            git config --global core.pager "delta --file-style=box --minus-color=#820005 --minus-emph-color=#a90008 --plus-color=#15600b --plus-emph-color=#218815 --theme=1337"
+            git config --global delta.features "side-by-side line-numbers decorations"
+            git config --global delta.whitespace-error-style "22 reverse"
+            git config --global delta.decorations.commit-decoration-style "bold yellow box ul"
+            git config --global delta.decorations.file-style "bold yellow ul"
+            git config --global delta.decorations.file-decoration-style "none"
+            git config --global interactive.difffilter "delta --color-only"
+            printf "Delta was installed successfully.\n\n"
+          else
+            printf "Failed to install delta\n\n"
+          fi
+        else
+          printf "Failed to download delta\n\n"
+        fi
+      fi
+    fi
+
+    # Prompt to configure delta configs if delta is installed and configs are not present
+    if [[ -x "$dir_delta_install/delta" ]]; then
+      if [[ "$(git config --global core.pager | grep delta | wc -l)" == "0" ]]; then
+        prompt_yn "Would you like to install git delta configs? [Y/n] " Y
+        if [[ $yn == Y ]]; then
           git config --global core.pager "delta --file-style=box --minus-color=#820005 --minus-emph-color=#a90008 --plus-color=#15600b --plus-emph-color=#218815 --theme=1337"
           git config --global delta.features "side-by-side line-numbers decorations"
           git config --global delta.whitespace-error-style "22 reverse"
@@ -240,74 +279,57 @@ if [[ $yn == Y ]]; then
           git config --global delta.decorations.file-style "bold yellow ul"
           git config --global delta.decorations.file-decoration-style "none"
           git config --global interactive.difffilter "delta --color-only"
-          printf "Delta was installed successfully.\n\n"
-        else
-          printf "Failed to install delta\n\n"
         fi
-      else
-        printf "Failed to download delta\n\n"
       fi
     fi
-  fi
 
-  # Prompt to configure delta configs if delta is installed and configs are not present
-  if [[ -x "$dir_delta_install/delta" ]]; then
-    if [[ "$(git config --global core.pager | grep delta | wc -l)" == "0" ]]; then
-      prompt_yn "Would you like to install git delta configs? [Y/n] " Y
-      if [[ $yn == Y ]]; then
-        git config --global core.pager "delta --file-style=box --minus-color=#820005 --minus-emph-color=#a90008 --plus-color=#15600b --plus-emph-color=#218815 --theme=1337"
-        git config --global delta.features "side-by-side line-numbers decorations"
-        git config --global delta.whitespace-error-style "22 reverse"
-        git config --global delta.decorations.commit-decoration-style "bold yellow box ul"
-        git config --global delta.decorations.file-style "bold yellow ul"
-        git config --global delta.decorations.file-decoration-style "none"
-        git config --global interactive.difffilter "delta --color-only"
+    # Check if gitprompt is already installed and if there are updates, prompt to update
+    if [[ -d "$dir_gitprompt" ]]; then
+      cd "$dir_gitprompt"
+      if [[ "$(git fetch -q; git status | grep 'Your branch is behind' | wc -l)" -eq 1 ]]; then
+        # Update gitprompt
+        prompt_yn "Do want to update gitprompt to the latest version? [Y/n] " Y
+        if [[ $yn == Y ]]; then
+          git pull -q
+        fi
       fi
-    fi
-  fi
+      cd - >/dev/null
+    else
+      # Install gitprompt
+      printf "gitprompt provides a modern, nice-looking bash prompt which shows the current git branch "
+      printf "with dirty/clean status, and other helpful status indicators.\n\nFor more information, see: "
+      printf "https://github.com/deanhouseholder/gitprompt\n\n"
+      prompt_yn "Do want to install gitprompt? [Y/n] " Y
+      if [[ $yn == Y ]]; then
+        if [[ ! -d "$dir_gitprompt" ]]; then
+          printf "\nInstalling gitprompt...\n\n"
+          git clone -q "$repo_gitprompt" "$dir_gitprompt"
+        fi
+      fi
 
-  # Check if gitprompt is already installed and if there are updates, prompt to update
-  if [[ -d "$dir_gitprompt" ]]; then
-    cd "$dir_gitprompt"
-    if [[ "$(git fetch -q; git status | grep 'Your branch is behind' | wc -l)" -eq 1 ]]; then
-      # Update gitprompt
-      prompt_yn "Do want to update gitprompt to the latest version? [Y/n] " Y
-      if [[ $yn == Y ]]; then
-        git pull -q
+      # Add auto-loading of gitprompt in .bash_profile if it isn't there
+      if [[ -z "$(grep "source $file_gitprompt" $file_startup)" ]]; then
+        printf "\n# Include the Git Prompt functions\nsource $file_gitprompt\n\n" >> $file_startup
+      fi
+
+      # Save the machine's name to .displayname
+      if [[ ! -f "$file_displayname" ]]; then
+        printf "\nWhat display name would you use for this machine (used in the title and prompt)?\n"
+        read machine_name
+        if [[ -n "$machine_name" ]]; then
+          echo "$machine_name" > "$file_displayname"
+          printf "\nalias set_title=\"change_title \$(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
+        else
+          hostname > "$file_displayname"
+        fi
       fi
     fi
-    cd - >/dev/null
+
   else
-    # Install gitprompt
-    printf "gitprompt provides a modern, nice-looking bash prompt which shows the current git branch "
-    printf "with dirty/clean status, and other helpful status indicators.\n\nFor more information, see: "
-    printf "https://github.com/deanhouseholder/gitprompt\n\n"
-    prompt_yn "Do want to install gitprompt? [Y/n] " Y
-    if [[ $yn == Y ]]; then
-      if [[ ! -d $dir_gitprompt ]]; then
-        printf "\nInstalling gitprompt...\n\n"
-        git clone -q $repo_gitprompt $dir_gitprompt
-      fi
-    fi
-
-    # Add auto-loading of gitprompt in .bash_profile if it isn't there
-    if [[ -z "$(grep "source $file_gitprompt" $file_startup)" ]]; then
-      printf "\n# Include the Git Prompt functions\nsource $file_gitprompt\n\n" >> $file_startup
-    fi
-
-    # Save the machine's name to .displayname
-    if [[ ! -f "$file_displayname" ]]; then
-      printf "\nWhat display name would you use for this machine (used in the title and prompt)?\n"
-      read machine_name
-      if [[ -n "$machine_name" ]]; then
-        echo "$machine_name" > "$file_displayname"
-        printf "\nalias set_title=\"change_title \$(cat ~/.displayname)\"\nset_title\n" >> $file_local_env
-      else
-        hostname > "$file_displayname"
-      fi
-    fi
+    printf "Git is not found in path\n\n"
   fi
 fi
+
 
 # Prompt to install fzf
 which fzf &>/dev/null
@@ -315,10 +337,19 @@ if [[ $? -ne 0 ]]; then
   printf "\nSeveral functions can be enhanced by installing the fuzzy finder (fzf).\n"
   prompt_yn "Do you wish to install fzf? [Y/n] " Y
   if [[ $yn == Y ]]; then
-    git clone --depth 1 -q "$repo_fzf" $dir_fzf
-    echo
-    $dir_fzf/install --all --no-zsh --no-fish >/dev/null
-    printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
+    if [[ $git_installed -eq 0 ]]; then
+      git clone --depth 1 -q "$repo_fzf" "$dir_fzf"
+      echo
+    else
+      cd "$dir_code"
+      wget -q "$url_git_fzf" -O master.zip >/dev/null
+      unzip -q master.zip
+      mv fzf-master "$dir_fzf"
+      rm master.zip
+      cd - 2>/dev/null
+    fi
+    #"$dir_fzf/install" --all --no-zsh --no-fish >/dev/null
+    #printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
   fi
   echo
 fi
@@ -329,10 +360,10 @@ if [[ -z "$(grep "source $file_profile" $file_startup 2>/dev/null)" ]]; then
 fi
 
 # Load new profile script
-source "$file_profile"
-source "$file_gitprompt"
+source "$file_profile" 2>/dev/null
+source "$file_gitprompt" 2>/dev/null
 
 # Clean up
-unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup repo_bash_profile repo_gitprompt machine_name url_git_ssh_keys user_email user_name yn file_tmp_delta dir_tmp_delta dir_delta_install
+unset dir_bin dir_code dir_bash_profile dir_gitprompt dir_ssh editor file_displayname file_git_ssh_keys file_gitprompt file_local_env file_profile file_startup git_installed repo_bash_profile repo_gitprompt machine_name url_git_ssh_keys url_git_bash_profile url_git_fzf user_email user_name yn file_tmp_delta dir_tmp_delta dir_delta_install
 
 printf "\nDone\n\nYou can safely remove setprofile.sh if you want, or use it to pull updates.\n\n"
