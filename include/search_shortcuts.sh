@@ -53,7 +53,7 @@ function search(){
   if [[ "$1" == '-i' ]]; then
     printf "Filetypes that are ignored:\n"
     out="$(printf ".%s, " "${filetypes_to_ignore[@]}")"
-    printf "%s\n\n" "${out:0:-2}"
+    printf "%s\n\n" "$(echo $out | sed -E 's/(.*)../\1/')"
     return 1
   fi
 
@@ -73,7 +73,7 @@ function search(){
     for path in "${paths_to_ignore[@]}"; do
       ignore_paths+=" -path \"*/${path}/*\" -o"
     done
-    ignore_paths="${ignore_paths:0:-2}" # Trim off the last '-o'
+    ignore_paths="$(echo $ignore_paths | sed -E 's/(.*)../\1/')" # Trim off the last '-o'
     ignore_paths+='\) -prune -o'
   fi
 
@@ -83,7 +83,7 @@ function search(){
   for filetype in "${filetypes_to_ignore[@]}"; do
     ignore_filetypes+=" -name '*.${filetype}' -o"
   done
-  ignore_filetypes="${ignore_filetypes:0:-2}" # Trim off the last '-o'
+  ignore_filetypes="$(echo $ignore_filetypes | sed -E 's/(.*)../\1/')" # Trim off the last '-o'
   ignore_filetypes+='\) -prune -o'
 
   # Escape any special characters in search input for safety with grep
