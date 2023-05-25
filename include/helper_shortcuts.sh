@@ -108,3 +108,10 @@ function rdns() {
   dig +short -x $1
 }
 
+# Add directory to path if not present
+# Appends to end by default. Pass in "pre" to prepend new dir to path instead.
+path_add() {
+  if ! echo "$PATH" | grep -Eq "(^|:)$1($|:)"; then
+     test "$2" == "pre" && export PATH=$1:$PATH || export PATH=$PATH:$1
+  fi
+}
