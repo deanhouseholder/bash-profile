@@ -18,10 +18,13 @@ function search(){
   local col_line_w=0 # Column containing the line number's max width
   local col_path_w=0 # Column containing the file path's max width
   local fixed_strings='--fixed-strings '
-  local search name case_sensitive find_array col_line col_path col_data error message usage filetypes_to_ignore escaped_search search_hex replace_hex ignore_paths count ignore_filetypes
+  local search name case_sensitive find_array col_line col_path col_data error message usage filetypes_to_ignore escaped_search search_hex replace_hex ignore_paths count ignore_filetypes clip_cols
 
   # Ignore certain binary filetypes to speed up searching
   filetypes_to_ignore=(3gp 7z aac apng avi avif bmp class dll doc docx exe flac gif gpg gz gzip ico iso jar jfif jpeg jpg jrb mdb mkv mov mp3 mp4 mpeg odt ogg pdf pgp pgp_ png pp ppt pptx pyc rar 'so.*' sqlite svg tar tar tif tiff vob wav webm webp wma wmv xls xlsx zip)
+
+  # Clip long results somewhere near the end of users' screen
+  clip_cols=$(($COLUMNS-40))
 
   # Check for missing input
   if [[ -z "$1" ]]; then
@@ -106,7 +109,7 @@ function search(){
   mapfile find_array < <( \
     eval "find * .[^.]* ..?* $ignore_paths $ignore_filetypes -type f -name '$name' -exec \
       grep -${case_sensitive}nH --color=never $fixed_strings -- \"$escaped_search\" {} + \
-      2>/dev/null | grep -v -- '^Binary' | uniq | sed -r -e '$filter_swap_separators'" \
+      2>/dev/null | grep -v -- '^Binary' | cut -c 1-$clip_cols | uniq | sed -r -e '$filter_swap_separators'" \
   )
 
   # Loop through the first time to determine max column widths and total count
