@@ -35,7 +35,7 @@ function search(){
     usage+="SEARCH_PATTERN       The string to be matched\n"
     usage+="FILE_PATTERN         File matching pattern such as '*.php'\n"
     usage+="CASE_INSENSITIVE     0 for case-sensitive search (default), 1 for case-insensitive\n"
-    usage+="IGNORE_DIRS          Comma-separated list of directories to ignore\n\n"
+    usage+="IGNORE_DIRS          Comma-separated list of directories to ignore. Use '*/dirname' to exclude in nested directories.\n\n"
 
     usage+="${message}Examples:${end}\n"
     usage+="search '.ajax' '*.js' 1\n"
@@ -53,7 +53,7 @@ function search(){
   if [[ "$1" == '-i' ]]; then
     printf "Filetypes that are ignored:\n"
     out="$(printf ".%s, " "${filetypes_to_ignore[@]}")"
-    printf "%s\n\n" "$(echo $out | sed -E 's/(.*)../\1/')"
+    printf "%s\n\n" "$(echo $out | sed -E 's/(.*),/\1/')"
     return 1
   fi
 
@@ -68,12 +68,12 @@ function search(){
     IFS=',' read -r -a paths_to_ignore <<< "$4"
 
     # Expand out the array of paths to match this syntax:
-    # \( -path "*/tmp/*" -o -path "*/.git/*" \) -prune -o
+    # \( -path "tmp/*" -o -path ".git/*" \) -prune -o
     ignore_paths='\('
     for path in "${paths_to_ignore[@]}"; do
-      ignore_paths+=" -path \"*/${path}/*\" -o"
+      ignore_paths+=" -path \"${path}/*\" -o"
     done
-    ignore_paths="$(echo $ignore_paths | sed -E 's/(.*)../\1/')" # Trim off the last '-o'
+    ignore_paths="$(echo $ignore_paths | sed -E 's/(.*)\-o/\1/')" # Trim off the last '-o'
     ignore_paths+='\) -prune -o'
   fi
 
