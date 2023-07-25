@@ -160,3 +160,118 @@ function e() {
   cd "$dir"
   printf "\nDone\n\n"
 }
+
+# Colorize Output
+# Usage: cat logfile | red error | green success
+co() {
+  case "$1" in
+      black)  color='0;30';;
+      dgray)  color='1;30';;
+      red)    color='1;31';;
+      green)  color='0;32';;
+      lgreen) color='1;32';;
+      honey)  color='0;33';;
+      yellow) color='1;33';;
+      blue)   color='1;34';;
+      purple) color='0;35';;
+      pink)   color='1;35';;
+      lblue)  color='0;36';;
+      cyan)   color='1;36';;
+      gray)   color='0;37';;
+      white)  color='1;37';;
+      *)      color='1;34';;
+  esac
+
+  while IFS= read -r line; do
+    if [[ -z "$2" ]]; then
+      echo "$line"
+    else
+      echo "$line" | sed "s/$2/\x1b[0;${color}m$2\x1b[0m/g"
+    fi
+  done
+}
+alias black='co black'
+alias blue='co blue'
+alias cyan='co cyan'
+alias dgray='co dgray'
+alias gray='co gray'
+alias green='co green'
+alias honey='co honey'
+alias lblue='co lblue'
+alias lgreen='co lgreen'
+alias pink='co pink'
+alias purple='co purple'
+alias red='co red'
+alias white='co white'
+alias yellow='co yellow'
+
+# Colorize Background
+# Usage: cat logfile | bred error | bgreen success
+cb() {
+  case "$1" in
+      black)  color="1;40";;
+      red)    color="1;41";;
+      green)  color="1;42";;
+      yellow) color="1;43";;
+      blue)   color="1;44";;
+      purple) color="1;45";;
+      cyan)   color="1;46";;
+      gray)   color="1;47";;
+      *)      color="1;44";;
+  esac
+
+  while IFS= read -r line; do
+    if [[ -z "$2" ]]; then
+      echo "$line"
+    else
+      echo "$line" | sed "s/$2/\x1b[0;${color}m$2\x1b[0m/g"
+    fi
+  done
+}
+alias bblack='cb black'
+alias bred='cb red'
+alias bgreen='cb green'
+alias byellow='cb yellow'
+alias bblue='cb blue'
+alias bpurple='cb purple'
+alias bcyan='cb cyan'
+alias bgray='cb gray'
+
+# Colorize Background for Whole Line
+# Usage: cat logfile | blred error | blgreen success
+cbl() {
+  case "$1" in
+      black)  color="1;40";;
+      red)    color="1;41";;
+      green)  color="1;42";;
+      yellow) color="1;43";;
+      blue)   color="1;44";;
+      purple) color="1;45";;
+      cyan)   color="1;46";;
+      gray)   color="1;47";;
+      *)      color="1;44";;
+  esac
+
+  while IFS= read -r line; do
+    if [[ -z "$2" ]]; then
+      echo "$line"
+    else
+      echo "$line" | sed "s/\(.*$2.*\)/\x1b[0;${color}m\1\x1b[0m/g"
+    fi
+  done
+}
+alias blblack='cbl black'
+alias blred='cbl red'
+alias blgreen='cbl green'
+alias blyellow='cbl yellow'
+alias blblue='cbl blue'
+alias blpurple='cbl purple'
+alias blcyan='cbl cyan'
+alias blgray='cbl gray'
+
+# Simple function to list all available color aliases
+listcolors() {
+  printf "Foreground colors:\n%s\n\n" "$(alias | grep "'co " | cut -d= -f1 | cut -d' ' -f2)"
+  printf "Background colors:\n%s\n\n" "$(alias | grep "'cb " | cut -d= -f1 | cut -d' ' -f2)"
+  printf "Background colors for whole line:\n%s\n\n" "$(alias | grep "'cb " | cut -d= -f1 | cut -d' ' -f2)"
+}
