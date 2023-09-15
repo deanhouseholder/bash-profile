@@ -78,14 +78,14 @@ function find_up(){ local p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do
 function go_up(){ local p="$(pwd)"; while [[ "$p" != "" && ! -e "$p/$1" ]]; do p="${p%/*}"; done; cd "$p"; }
 
 # ls with octal permission labels
-function lso () {
+function lso() {
   test -z "$1" && local dirname="." || local dirname="$1"
   ls -lF --color "$dirname" | sed -e 's/--x/1/g' -e 's/-w-/2/g' -e 's/-wx/3/g' -e 's/r--/4/g' -e 's/r-x/5/g' -e 's/rw-/6/g' -e 's/rw[xt]/7/g' -e 's/---/0/g'
 }
 
 # Get an ordered list of subdirectory sizes
-function big () {
-  \ls -d */ .*/ | grep -vE -e '^\.+/$' | sed -E 's/(.*)\//\1/' | xargs du -sk | sort -n | awk 'BEGIN{ pref[1]="K"; pref[2]="M"; pref[3]="G";} { total = total + $1; x = $1; y = 1; while( x > 1024 ) { x = (x + 1023)/1024; y++; } printf("%g%s\t%s\n",int(x*10)/10,pref[y],$2); } END { y = 1; while( total > 1024 ) { total = (total + 1023)/1024; y++; } printf("Total: %g%s\n",int(total*10)/10,pref[y]); }'
+function big() {
+  find . -maxdepth 1 -type d \! -name . -exec du -hs {} + | sort -h
 }
 
 # Check if a binary exists
