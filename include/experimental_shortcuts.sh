@@ -161,117 +161,95 @@ function e() {
   printf "\nDone\n\n"
 }
 
-# Colorize Output
-# Usage: cat logfile | red error | green success
-co() {
-  case "$1" in
-      black)  color='0;30';;
-      dgray)  color='1;30';;
-      red)    color='1;31';;
-      green)  color='0;32';;
-      lgreen) color='1;32';;
-      honey)  color='0;33';;
-      yellow) color='1;33';;
-      blue)   color='1;34';;
-      purple) color='0;35';;
-      pink)   color='1;35';;
-      lblue)  color='0;36';;
-      cyan)   color='1;36';;
-      gray)   color='0;37';;
-      white)  color='1;37';;
-      *)      color='1;34';;
-  esac
+# Escape any characters sed would choke over
+# Escape characters: \ / . [ ] * ^ $
+escape_for_sed() {
+    local s="$1"
+    s="${s//\\/\\\\}"  # escape backslashes first
+    s="${s//\//\\/}"   # escape forwardslashes
+    s="${s//\./\\.}"   # escape dots
+    s="${s//\[/\\[}"   # escape open square brackets
+    s="${s//\]/\\]}"   # escape close square brackets
+    s="${s//\*/\\*}"   # escape asterisks
+    s="${s//+/\\+}"    # escape plus signs
+    s="${s//^/\\^}"    # escape carets
+    s="${s//$/\\$}"    # escape dollar signs
+    echo "$s"
+}
+
+## Color Output
+## Usage with stand-alone function:  cat logfile | color_output fg 0\;30 Error
+## Usage with aliases (recommended): cat logfile | red error | bggreen success | blyellow warning
+## Regex allowed: cat logfile | red 'error: .* in'
+color_output() {
+  local bypass type color search bypass line
+
+  bypass=0
+  test -z "$1" && type="fg" || type="$1"
+  test -z "$2" && color="red" || color="$2"
+  shift 2
+  search="$*"
+
+  if [[ ! -z "$search" ]]; then
+    search="${*//\\/\\\\}"      # escape backslashes
+    search="${search//\//\\/}"  # escape forwardslashes
+  fi
 
   while IFS= read -r line; do
-    if [[ -z "$2" ]]; then
+    if [[ -z "$search" ]]; then
       echo "$line"
     else
-      echo "$line" | sed "s/$2/\x1b[0;${color}m$2\x1b[0m/g"
+      if [[ ! $type == "bgl" ]]; then
+        # Foreground/Background color
+        echo "$line" | sed -E "s/($search)/\x1b[0;${color}m\1\x1b[0m/g"
+      else
+        # Background whole line color
+        echo "$line" | sed -E "s/(.*$search.*)/\x1b[0;${color}m\1\x1b[0m/g"
+      fi
     fi
   done
 }
-alias black='co black'
-alias blue='co blue'
-alias cyan='co cyan'
-alias dgray='co dgray'
-alias gray='co gray'
-alias green='co green'
-alias honey='co honey'
-alias lblue='co lblue'
-alias lgreen='co lgreen'
-alias pink='co pink'
-alias purple='co purple'
-alias red='co red'
-alias white='co white'
-alias yellow='co yellow'
 
-# Colorize Background
-# Usage: cat logfile | bred error | bgreen success
-cb() {
-  case "$1" in
-      black)  color="1;40";;
-      red)    color="1;41";;
-      green)  color="1;42";;
-      yellow) color="1;43";;
-      blue)   color="1;44";;
-      purple) color="1;45";;
-      cyan)   color="1;46";;
-      gray)   color="1;47";;
-      *)      color="1;44";;
-  esac
+# Foreground Color Aliases
+alias black='color_output fg 0\;30'
+alias blue='color_output fg 1\;34'
+alias cyan='color_output fg 1\;36'
+alias dgray='color_output fg 1\;30'
+alias gray='color_output fg 0\;37'
+alias green='color_output fg 0\;32'
+alias honey='color_output fg 0\;33'
+alias lblue='color_output fg 0\;36'
+alias lgreen='color_output fg 1\;32'
+alias pink='color_output fg 1\;35'
+alias purple='color_output fg 0\;35'
+alias red='color_output fg 1\;31'
+alias white='color_output fg 1\;37'
+alias yellow='color_output fg 1\;33'
 
-  while IFS= read -r line; do
-    if [[ -z "$2" ]]; then
-      echo "$line"
-    else
-      echo "$line" | sed "s/$2/\x1b[0;${color}m$2\x1b[0m/g"
-    fi
-  done
-}
-alias bblack='cb black'
-alias bred='cb red'
-alias bgreen='cb green'
-alias byellow='cb yellow'
-alias bblue='cb blue'
-alias bpurple='cb purple'
-alias bcyan='cb cyan'
-alias bgray='cb gray'
+# Background Color Aliases
+alias bblack='color_output bg 1\;40'
+alias bred='color_output bg 1\;41'
+alias bgreen='color_output bg 1\;42'
+alias byellow='color_output bg 1\;43'
+alias bblue='color_output bg 1\;44'
+alias bpurple='color_output bg 1\;45'
+alias bcyan='color_output bg 1\;46'
+alias bgray='color_output bg 1\;47'
 
-# Colorize Background for Whole Line
-# Usage: cat logfile | blred error | blgreen success
-cbl() {
-  case "$1" in
-      black)  color="1;40";;
-      red)    color="1;41";;
-      green)  color="1;42";;
-      yellow) color="1;43";;
-      blue)   color="1;44";;
-      purple) color="1;45";;
-      cyan)   color="1;46";;
-      gray)   color="1;47";;
-      *)      color="1;44";;
-  esac
-
-  while IFS= read -r line; do
-    if [[ -z "$2" ]]; then
-      echo "$line"
-    else
-      echo "$line" | sed "s/\(.*$2.*\)/\x1b[0;${color}m\1\x1b[0m/g"
-    fi
-  done
-}
-alias blblack='cbl black'
-alias blred='cbl red'
-alias blgreen='cbl green'
-alias blyellow='cbl yellow'
-alias blblue='cbl blue'
-alias blpurple='cbl purple'
-alias blcyan='cbl cyan'
-alias blgray='cbl gray'
+# Background Whole-line Color Aliases
+alias blblack='color_output bgl 1\;40'
+alias blred='color_output bgl 1\;41'
+alias blgreen='color_output bgl 1\;42'
+alias blyellow='color_output bgl 1\;43'
+alias blblue='color_output bgl 1\;44'
+alias blpurple='color_output bgl 1\;45'
+alias blcyan='color_output bgl 1\;46'
+alias blgray='color_output bgl 1\;47'
 
 # Simple function to list all available color aliases
 listcolors() {
-  printf "Foreground colors:\n%s\n\n" "$(alias | grep "'co " | cut -d= -f1 | cut -d' ' -f2)"
-  printf "Background colors:\n%s\n\n" "$(alias | grep "'cb " | cut -d= -f1 | cut -d' ' -f2)"
-  printf "Background colors for whole line:\n%s\n\n" "$(alias | grep "'cb " | cut -d= -f1 | cut -d' ' -f2)"
+  printf "Foreground colors:\n%s\n\n" "$(alias | grep "'color_output fg " | cut -d= -f1 | cut -d' ' -f2)"
+  printf "Background colors:\n%s\n\n" "$(alias | grep "'color_output bg " | cut -d= -f1 | cut -d' ' -f2)"
+  printf "Background colors for whole line:\n%s\n\n" "$(alias | grep "'color_output bgl " | cut -d= -f1 | cut -d' ' -f2)"
 }
+

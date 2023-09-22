@@ -115,3 +115,17 @@ path_add() {
      test "$2" == "pre" && export PATH=$1:$PATH || export PATH=$PATH:$1
   fi
 }
+
+# Show a log of internet connection status
+pingloop() {
+  while true; do
+    printf "%s\t" "$(date '+%r')"
+    if (echo >/dev/tcp/google.com/443) &>/dev/null; then
+      echo -e "\e[1;32mOnline\e[0m"
+    else
+      echo -e "\e[1;31mOffline\e[0m"
+    fi
+    sleep 5
+  done
+}
+
