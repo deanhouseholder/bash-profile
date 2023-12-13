@@ -37,7 +37,7 @@ function cd() {
   fi
 }
 # Display a list of cd aliases
-alias cdlist='printf "\nList of cd aliases:\n\n" && printf "%s\n" ${cd_array[@]} | column -t -s= && echo'
+alias cdlist='printf "\nList of cd aliases:\n\n" && printf "%s\n" "${cd_array[@]}" | column -t -s= && echo'
 # Display interactive list of cd aliases if fzf is installed
 alias cdi='[[ -x $(type -fP fzf) ]] && cd "$(( cdlist ) | sed '1,3d' | fzf --tac -0 | awk '\''{print $2}'\'')" || echo fzf is not installed'
 alias cdb='[[ -x $(type -fP fzf) ]] && cd "$(dirs | sed -e "s/ /\n/g" | fzf --tac -0)" || echo fzf is not installed'

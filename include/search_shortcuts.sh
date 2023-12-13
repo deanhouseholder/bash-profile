@@ -24,7 +24,7 @@ function search(){
   filetypes_to_ignore=(3gp 7z aac apng avi avif bmp class dll doc docx exe flac gif gpg gz gzip ico iso jar jfif jpeg jpg jrb mdb mkv mov mp3 mp4 mpeg odt ogg pdf pgp pgp_ png pp ppt pptx pyc rar 'so.*' sqlite svg tar tar tif tiff vob wav webm webp wma wmv xls xlsx zip)
 
   # Clip long results somewhere near the end of users' screen
-  clip_cols=$(($COLUMNS-40))
+  clip_cols=$(($COLUMNS-5))
 
   # Check for missing input
   if [[ -z "$1" ]]; then
