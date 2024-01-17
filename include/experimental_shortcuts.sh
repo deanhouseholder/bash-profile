@@ -39,7 +39,7 @@ function cd() {
 # Display a list of cd aliases
 alias cdlist='(echo -e "\nList of cd aliases:\n" && (printf "%s\n" "${cd_array[@]}" | column -t -s=); echo)'
 # Display interactive list of cd aliases if fzf is installed
-alias cdi='[[ -x $(type -fP fzf) ]] && cd "$(printf "%s\n" "${cd_array[@]}" | cut -d= -f2 | fzf --tac -0)" || echo fzf is not installed'
+alias cdi='[[ -x $(type -fP fzf) ]] && cd "$(printf "%s\n" "${cd_array[@]}" | cut -d= -f2 | sort | uniq | fzf --tac -0)" || echo fzf is not installed'
 # Display an interactive list of previous directories if fzf is installed
 alias cdb='[[ -x $(type -fP fzf) ]] && cd "$(dirs | sed -e "s/ /\n/g" | fzf --tac -0)" || echo fzf is not installed'
 
