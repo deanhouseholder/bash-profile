@@ -37,11 +37,11 @@ function cd() {
   fi
 }
 # Display a list of cd aliases
-alias cdlist='(echo -e "\nList of cd aliases:\n" && (printf "%s\n" "${cd_array[@]}" | column -t -s=); echo)'
+alias cdlist='echo -e "\nList of cd aliases:\n" && (printf "%s\n" "${cd_array[@]}" | column -t -s=); echo'
 # Display interactive list of cd aliases if fzf is installed
-alias cdi='[[ -x $(type -fP fzf) ]] && cd "$(printf "%s\n" "${cd_array[@]}" | cut -d= -f2 | sort | uniq | fzf --tac -0)" || echo fzf is not installed'
+alias cdi='[[ -x $(type -fP fzf) ]] && { dir="$(printf "%s\n" "${cd_array[@]}" | cut -d= -f2 | fzf --tac -0)"; test -n "$dir" && cd "$dir" || true;} || echo "fzf not found"'
 # Display an interactive list of previous directories if fzf is installed
-alias cdb='[[ -x $(type -fP fzf) ]] && cd "$(dirs | sed -e "s/ /\n/g" | fzf --tac -0)" || echo fzf is not installed'
+alias cdb='[[ -x $(type -fP fzf) ]] && { dir="$(dirs -l -p | uniq | fzf --tac -0)"; test -n "$dir" && cd $dir || true;} || echo "fzf not found"'
 
 # Add a "back directory" function to change back (with popd) any number of directories
 function bd() {
@@ -255,3 +255,103 @@ listcolors() {
   printf "Background colors for whole line:\n%s\n\n" "$(alias | grep "'color_output bgl " | cut -d= -f1 | cut -d' ' -f2)"
 }
 
+
+# Watch a file to see it's progress as it being written to
+# If you know the final size, you can specify it as a second parameter to get a percent completion
+function watch_file_progress() {
+  local sleep=0.25          # How quickly to check for updates and rotate spinner
+  local stable_duration=10  # Duration in seconds to watch for changes past expected file size
+
+  local spinner=("⣶" "⣧" "⣏" "⡟" "⠿" "⢻" "⣹" "⣼")
+  local file="$1"
+  local total_size=$2
+  local current_size
+  local current_size_hr     # Human-readable current size
+  local total_size_hr       # Human-readable total size
+  local percent
+  local spinner_index=0
+  local size_stable_count=0
+  local last_size=0
+  local max_count=$(awk "BEGIN {print int($stable_duration / $sleep)}") # Number of iterations for the stable duration
+  local red='\e[38;5;124m'
+  local green='\e[38;5;34m'
+  local white='\e[38;5;253m'
+  local orange='\e[38;5;130m'
+  local nc='\e[0m' # No Color
+  local restore_m=0
+
+  # Disable Job Control but capture original setting
+  if [[ $- =~ m ]]; then
+    restore_m=1
+    set +m
+  fi
+
+  # Function to restore the cursor
+  function cleanup() {
+    #tput cnorm                        # Restore the curor
+    [[ $restore_m -eq 1 ]] && set -m  # Restore Job Control setting
+    echo
+  }
+
+  # Run cleanup on ctrl+c
+  trap 'cleanup; trap - SIGINT; return 0' SIGINT
+
+  echo
+
+  # Usage message
+  if [[ -z "$1" ]]; then
+    echo -e "${red}Error: No filename given$nc$white\n\nUSAGE:"
+    echo -e "watch_file_progress FILENAME SIZE"
+    echo -e "  FILENAME    the file you want to watch"
+    echo -e "  SIZE        OPTIONAL - The filesize (in bytes) that you estimate the file will be\n$nc"
+    return 1
+  fi
+
+  # Check to see if file exists
+  if [[ ! -f "$file" ]]; then
+    echo -e "${red}Error: File does not exist${nc}\n"
+    return 1
+  fi
+
+  # Convert total size to human-readable format if provided
+  if [[ -n $total_size && $total_size -gt 0 ]]; then
+    total_size_hr=$(numfmt --to=iec $total_size)
+  fi
+
+  # Hide cursor
+  #tput civis
+
+  # Loop over status checks
+  while true; do
+    current_size=$(du -b "$file" | cut -f1)
+    current_size_hr=$(du -h "$file" | cut -f1)
+
+    if [[ -n $total_size && $total_size -gt 0 ]]; then
+      percent=$((current_size * 100 / total_size))
+      echo -e "\e[A$orange${spinner[$spinner_index]} ${white}Progress: $current_size_hr / $total_size_hr ($percent%)$nc\e[K"
+
+      # Check if it has reached/exceeded 100%
+      if [[ $percent -ge 100 ]]; then
+        if [[ $last_size -eq $current_size ]]; then
+          ((size_stable_count++))
+          if [[ $size_stable_count -ge $max_count ]]; then
+            echo -e "\n${green}Done!$nc\r"
+            break
+          fi
+        else
+          size_stable_count=0
+        fi
+        last_size=$current_size
+      fi
+    else
+      echo -e "\e[A$orange${spinner[$spinner_index]} ${white}Current Size: $current_size_hr$nc\e[K"
+    fi
+
+    spinner_index=$(( (spinner_index + 1) % ${#spinner[@]} ))
+    sleep $sleep
+  done
+
+  # Clean up environment
+  cleanup
+  trap - SIGINT
+}
