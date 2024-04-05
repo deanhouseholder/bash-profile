@@ -72,6 +72,7 @@ mkdir -p $dir_ssh
 chmod 700 $dir_ssh
 mkdir -p $dir_code
 chmod 700 $dir_code
+mkdir -p ~/.vim/undo
 
 touch "$file_startup"
 
@@ -144,7 +145,29 @@ fi
 
 # Add a .vimrc file to always turn on syntax highlighting and line numbers
 if [[ ! -s ~/.vimrc ]]; then
-  printf "syntax on\nset nu\nset tabstop=4\n" > ~/.vimrc
+  echo 'colorscheme desert' > ~/.vimrc
+  echo 'syntax on                      " Turn on syntax highlighting for known filetypes' >> ~/.vimrc
+  echo 'set number                     " Enable line numbers' >> ~/.vimrc
+  echo 'set tabstop=4                  " Interpret tabs to be 4 characters' >> ~/.vimrc
+  echo 'set expandtab                  " When pressing tab, insert 4 spaces' >> ~/.vimrc
+  echo 'set shiftwidth=4               " Set the number of spaces for auto-indentation' >> ~/.vimrc
+  echo 'set ignorecase                 " Case-insensitive searching' >> ~/.vimrc
+  echo 'set smartcase                  " If searching with an uppercase, that search will be case-sensitive' >> ~/.vimrc
+  echo 'set incsearch                  " Shows partial matches for a search phrase as you type' >> ~/.vimrc
+  echo 'set autoindent                 " Continues the indentation from the previous line' >> ~/.vimrc
+  echo 'set smartindent                " Automatically inserts indents in certain contexts, useful for code' >> ~/.vimrc
+  echo 'set backspace=indent,eol,start " Makes the backspace key more intuitive' >> ~/.vimrc
+  echo 'set mouse=a                    " Enables mouse support in all modes' >> ~/.vimrc
+  echo 'set splitbelow                 " Sets default split behavior to be below' >> ~/.vimrc
+  echo 'set encoding=utf-8             " Default to UTF-8 file encoding' >> ~/.vimrc
+  echo 'set undofile                   " Persistant Undo' >> ~/.vimrc
+  echo 'set undodir=~/.vim/undo        " Saves undo history per file. Make sure the directory exists' >> ~/.vimrc
+  echo 'set foldmethod=syntax          " Enables code folding based on syntax' >> ~/.vimrc
+  echo 'set foldlevelstart=10          " Sets a default open fold level to keep most code unfolded on open' >> ~/.vimrc
+  echo 'set showmatch' >> ~/.vimrc
+  echo '' >> ~/.vimrc
+  echo '" Remember cursor line number within each file' >> ~/.vimrc
+  echo 'au BufReadPost * if line("'\''\"") > 0 && line ("'\''\"") <= line("$") | exe "normal! g'\''\"" | endif' >> ~/.vimrc
 fi
 
 # Check if bash-profile is already installed, and if there are updates, prompt to update
@@ -250,13 +273,12 @@ if [[ $yn == Y ]]; then
           rm "$file_tmp_delta"
           rm -rf "$dir_tmp_delta"
           if [[ -x "$dir_delta_install/delta" ]]; then
-            git config --global core.pager "delta --file-style=box --minus-color=#820005 --minus-emph-color=#a90008 --plus-color=#15600b --plus-emph-color=#218815 --theme=1337"
+            git config --global core.pager "delta --file-style=box --minus-style=#820005 --minus-emph-style=#a90008 --plus-style=#15600b --plus-emph-style=#218815 --theme=1337"
             git config --global delta.features "side-by-side line-numbers decorations"
             git config --global delta.whitespace-error-style "22 reverse"
             git config --global delta.decorations.commit-decoration-style "bold yellow box ul"
             git config --global delta.decorations.file-style "bold yellow ul"
             git config --global delta.decorations.file-decoration-style "none"
-            git config --global interactive.difffilter "delta --color-only"
             printf "Delta was installed successfully.\n\n"
           else
             printf "Failed to install delta\n\n"
@@ -279,6 +301,9 @@ if [[ $yn == Y ]]; then
           git config --global delta.decorations.file-style "bold yellow ul"
           git config --global delta.decorations.file-decoration-style "none"
           git config --global interactive.difffilter "delta --color-only"
+          git config --global delta.navigate "true"
+          git config --global interactive.difffilter "delta --color-only"
+          git config --global diff.colorMoved "default"
         fi
       fi
     fi
@@ -348,8 +373,7 @@ if [[ $? -ne 0 ]]; then
       rm master.zip
       cd - 2>/dev/null
     fi
-    #"$dir_fzf/install" --all --no-zsh --no-fish >/dev/null
-    #printf "\n%s\n\n" '[ -f ~/.fzf.bash ] && source ~/.fzf.bash' >> $file_startup
+    yes | "$dir_fzf/install" --all --no-zsh --no-fish >/dev/null
   fi
   echo
 fi

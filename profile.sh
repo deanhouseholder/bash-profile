@@ -91,7 +91,7 @@ if [[ $- =~ i ]]; then
   alias colordiff='colordiff -w'
   alias sdiff='sdiff -bBWs'
   alias diffy='test $COLUMNS -ge 155 && COLS=154 || COLS=$COLUMNS; diff -yw --suppress-common-lines -W $COLS'
-
+  alias countfiles='find -maxdepth 1 -type f | wc -l'
 
   ## Include Shortcut files
 
